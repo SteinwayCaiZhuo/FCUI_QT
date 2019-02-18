@@ -13,7 +13,12 @@
 #include <QTableWidget>
 #include <QListWidget>
 #include <QTextBrowser>
+#include <QSet>
+#include<QTimer>
+#include <QDebug>
+#include <utility>
 #include "../Data/DataDef.h"
+#include "../Logic/MainLogic.h"
 
 namespace Ui {
 class PlayScene;
@@ -38,6 +43,7 @@ public:
     bool autoView;
     bool singleMode;
     QPoint mapToGeo(const QPoint& pos);
+    QPoint mapToGeo(const QPointF& pos);
 
 signals:
     void runThreadStart();
@@ -64,6 +70,7 @@ public slots:
     void opacityUpdate();
     void myUpdateGeometry();
     void focusOn(const QPoint&point);
+    void focusOn(const QPointF&point);
     void autoViewAdjust();
     void updateTowerInfo(UI::TTower*);
     void updateSoldierInfo(UI::TSoldier*);
@@ -71,6 +78,7 @@ public slots:
     virtual void mousePressEvent(QMouseEvent*event);
     virtual void wheelEvent(QWheelEvent *event);
     friend class Worker;
+    friend class MoveSoldier;
 private:
     Ui::PlayScene *ui;
     QPushButton* startGameButton;
@@ -82,7 +90,7 @@ private:
     QPushButton* singleContinousButton;
     QLabel* mapBackGround;
     QLabel* rightBackGround;
-    QLabel* roundInfo;
+    QTextBrowser* roundInfo;
     QVector<QLabel*>opacityLabels;
     QTableWidget* playerInfoTable;
     QListWidget* commandInfoList;
@@ -101,6 +109,7 @@ private:
 
     QMap<int, QLabel*>soldiers;
     QMap<int, QLabel*>towers;
+
     QVector<QAbstractAnimation*>animations;
     float wheelScaleRate;
 
@@ -111,10 +120,9 @@ private:
     int autoViewInterval;
     int autoViewCurrentStep;
     QSizeF pixelSizeDiff;
-    QPoint targetFocusPoint;
+    QPointF targetFocusPoint;
 
     float focusTime;
-
 };
 
 class Worker: public QObject
@@ -128,4 +136,38 @@ signals:
     void finishedWork();
 
 };
+
+class MoveSoldier:public QObject
+{
+    Q_OBJECT
+public:
+    using ValueType = QPair<float, QPointF>;
+public:
+    MoveSoldier(QPointF*moveObject = nullptr, int duration = 1000);
+    ~MoveSoldier();
+public:
+    QPointF* moveObject;
+    QVector<ValueType>values;
+    QTimer* moveTimer;
+    int maxStep;//=duration/interval
+    float currStep;
+    int duration;
+    void setValue(float step, const QPointF&value);
+    void startMove();
+    QPair<ValueType, ValueType>getNeighbor();
+public slots:
+    void updateValue();
+
+    //Call MoveSoldier* = new MoveSoldier(moveSoldier, duration);MoveSoldier->setValue(.,.);MoveSoldier->start();
+    //static QTimer* deleteTimer;
+public slots:
+
+public:
+   // static void deleteLater(MoveSoldier*);
+      static QSet<MoveSoldier*>moveToDelete;
+public:
+    int interval;
+};
+
+
 #endif // PLAYSCENE_H

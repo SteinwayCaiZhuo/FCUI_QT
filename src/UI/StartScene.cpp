@@ -9,11 +9,12 @@ StartScene::StartScene(QWidget *parent) :
 {
     ui->setupUi(this);
     this->setWindowTitle("FC16UI-START");
-
+    this->setGeometry(QRect(QPoint(720, 405), QSize(480, 270)));
+    this->setFixedSize(QSize(480, 270));
 
     openFileButton = new QPushButton("Select a File", this);
-    openFileButton->setGeometry(QRect(QPoint(100, 100),
-                                QSize(200, 50)));
+    openFileButton->setGeometry(QRect(QPoint(160, 110),
+                                QSize(160, 50)));
     connect(openFileButton, SIGNAL(clicked(bool)),
             this, SLOT(openFileButtonClicked()));
 

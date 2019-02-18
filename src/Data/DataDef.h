@@ -9,7 +9,7 @@
 #include <tchar.h>
 #include <windows.h>
 #include <QException>
-#include <QPoint>
+#include <QPointF>
 #include <QObject>
 #define SOLDIER_SET_START 17
 #define SOLDIER_SET_COL 7
@@ -160,12 +160,13 @@ namespace UI
 		TPlayer* m_pOwner;	
 		int m_nBlood;
 		SoldierType m_nSoldierType;
-        QPoint m_Position;
+        QPointF m_Position;
 		int m_nLevel;
 		SoldierMoveType m_strctSoldierMove;
 		UIObject* m_pVictim;
 		bool m_bFreshman;
 		bool m_bDead;
+        bool m_bAnimation;
 
 		//	Default Constructor
 		TSoldier();
@@ -201,7 +202,7 @@ namespace UI
 		bool m_bUpgrade; //
 
 
-        QPoint m_Position;
+        QPointF m_Position;
 
 		TTower();
         TTower(const int& towerID, const int& owner, const int& level, const int& blood, const int& recruiting, const int& recruitingRound, const QString& recruitingType);

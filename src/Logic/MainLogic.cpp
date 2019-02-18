@@ -1,6 +1,6 @@
 ﻿
 #include "MainLogic.h"
-
+#include "../UI/PlayScene.h"
 
 #include <windows.h>
 #include <thread>
@@ -122,6 +122,7 @@ namespace UI
         ifsGameResult.open(loadFileName.toStdString(), std::ios::in);
 		if (!ifsGameResult.is_open()) return;
 		MainLogic::GetInstance()->WriteLog("Succesfully loaded the file");
+        qDebug()<<"Successfully loaded the file";
 		//ifsGameResult.close();
         if(playScene==nullptr)
         {
