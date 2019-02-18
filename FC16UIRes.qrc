@@ -1,0 +1,62 @@
+<RCC>
+    <qresource prefix="/">
+        <file>FC16UIResource/start.jpg</file>
+        <file>FC16UIResource/tileset/dormitory.png</file>
+        <file>FC16UIResource/tileset/forest.png</file>
+        <file>FC16UIResource/tileset/merge_script.py</file>
+        <file>FC16UIResource/tileset/mountain.png</file>
+        <file>FC16UIResource/tileset/river.png</file>
+        <file>FC16UIResource/tileset/RMXP版RMVX素材包-自动地图图块 (17)_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/road.png</file>
+        <file>FC16UIResource/tileset/RPG Marker VX自带-平铺(TileD)_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/soldier_set.png</file>
+        <file>FC16UIResource/tileset/teaching_area.png</file>
+        <file>FC16UIResource/tileset/terrains_list.png</file>
+        <file>FC16UIResource/tileset/tower.png</file>
+        <file>FC16UIResource/tileset/tower_small.png</file>
+        <file>FC16UIResource/tileset/VX森林整合-pic2197_VX森林素材整合_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/口袋妖怪-的地图-海23tq1ko(sea23tq1ko)_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/日站素材集01-TileC_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/日站素材集01-布龙嫩(brunnen)_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/tileset/永恒乐章-地图图块-TileA2_爱给网_aigei_com.png</file>
+        <file>FC16UIResource/background.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyArcher0.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyArcher1.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyArcher2.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyArcher3.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyInfantry0.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyInfantry1.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyInfantry2.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyInfantry3.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyKnight0.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyKnight1.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyKnight2.png</file>
+        <file>FC16UIResource/tileset/workspace/HeavyKnight3.png</file>
+        <file>FC16UIResource/tileset/workspace/LightArcher0.png</file>
+        <file>FC16UIResource/tileset/workspace/LightArcher1.png</file>
+        <file>FC16UIResource/tileset/workspace/LightArcher2.png</file>
+        <file>FC16UIResource/tileset/workspace/LightArcher3.png</file>
+        <file>FC16UIResource/tileset/workspace/LightInfantry0.png</file>
+        <file>FC16UIResource/tileset/workspace/LightInfantry1.png</file>
+        <file>FC16UIResource/tileset/workspace/LightInfantry2.png</file>
+        <file>FC16UIResource/tileset/workspace/LightInfantry3.png</file>
+        <file>FC16UIResource/tileset/workspace/LightKnight0.png</file>
+        <file>FC16UIResource/tileset/workspace/LightKnight1.png</file>
+        <file>FC16UIResource/tileset/workspace/LightKnight2.png</file>
+        <file>FC16UIResource/tileset/workspace/LightKnight3.png</file>
+        <file>FC16UIResource/tileset/workspace/Mangonel0.png</file>
+        <file>FC16UIResource/tileset/workspace/Mangonel1.png</file>
+        <file>FC16UIResource/tileset/workspace/Mangonel2.png</file>
+        <file>FC16UIResource/tileset/workspace/Mangonel3.png</file>
+        <file>FC16UIResource/tileset/workspace/merge.png</file>
+        <file>FC16UIResource/back/rightBack.jpg</file>
+        <file>FC16UIResource/back/start.jpg</file>
+        <file>FC16UIResource/produce.png</file>
+        <file>FC16UIResource/upgrade.png</file>
+        <file>FC16UIResource/tileset/towers/tower0.png</file>
+        <file>FC16UIResource/tileset/towers/tower1.png</file>
+        <file>FC16UIResource/tileset/towers/tower-1.png</file>
+        <file>FC16UIResource/tileset/towers/tower2.png</file>
+        <file>FC16UIResource/tileset/towers/tower3.png</file>
+    </qresource>
+</RCC>
