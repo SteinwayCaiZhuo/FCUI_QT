@@ -210,64 +210,64 @@
     switch (id)
     {
     case 0:
-      this->m_Position = QPoint(6, 89);
+      this->m_Position = QPointF(6, 89);
       break;
     case 1:
-      this->m_Position = QPoint(20, 86);
+      this->m_Position = QPointF(20, 86);
       break;
     case 2:
-      this->m_Position = QPoint(33, 92);
+      this->m_Position = QPointF(33, 92);
       break;
     case 3:
-      this->m_Position = QPoint(44, 77);
+      this->m_Position = QPointF(44, 77);
       break;
     case 4:
-      this->m_Position = QPoint(61, 74);
+      this->m_Position = QPointF(61, 74);
       break;
     case 5:
-      this->m_Position = QPoint(71, 88);
+      this->m_Position = QPointF(71, 88);
       break;
     case 6:
-      this->m_Position = QPoint(83, 77);
+      this->m_Position = QPointF(83, 77);
       break;
     case 7:
-      this->m_Position = QPoint(15, 59);
+      this->m_Position = QPointF(15, 59);
       break;
     case 8:
-      this->m_Position = QPoint(15, 43);
+      this->m_Position = QPointF(15, 43);
       break;
     case 9:
-      this->m_Position = QPoint(28, 51);
+      this->m_Position = QPointF(28, 51);
       break;
     case 10:
-      this->m_Position = QPoint(51, 54);
+      this->m_Position = QPointF(51, 54);
       break;
     case 11:
-      this->m_Position = QPoint(63, 49);
+      this->m_Position = QPointF(63, 49);
       break;
     case 12:
-      this->m_Position = QPoint(73, 46);
+      this->m_Position = QPointF(73, 46);
       break;
     case 13:
-      this->m_Position = QPoint(85, 52);
+      this->m_Position = QPointF(85, 52);
       break;
     case 14:
-      this->m_Position = QPoint(8, 16);
+      this->m_Position = QPointF(8, 16);
       break;
     case 15:
-      this->m_Position = QPoint(22, 21);
+      this->m_Position = QPointF(22, 21);
       break;
     case 16:
-      this->m_Position = QPoint(39, 10);
+      this->m_Position = QPointF(39, 10);
       break;
     case 17:
-      this->m_Position = QPoint(61, 25);
+      this->m_Position = QPointF(61, 25);
       break;
     case 18:
-      this->m_Position = QPoint(77, 15);
+      this->m_Position = QPointF(77, 15);
       break;
     default:
-      this->m_Position = QPoint(0, 0);
+      this->m_Position = QPointF(0, 0);
     }
   }
   int TTower::getOwnerID()const
@@ -371,7 +371,7 @@
 		this->m_nSoldierType = SoldierTypeStr2Enum(type);
 		this->m_nLevel = level;
 		this->m_nBlood = blood;
-        this->m_Position = QPoint(x_position, y_position);
+        this->m_Position = QPointF(x_position, y_position);
 		this->m_strctSoldierMove = SoldierMoveType{ false, UP, 0 };
 		this->m_pVictim = nullptr;
 		this->m_bFreshman = true;
@@ -448,7 +448,7 @@
 			}
 		}
 
-        m_Position = QPoint(x_pos, y_pos);
+        m_Position = QPointF(x_pos, y_pos);
 		if (m_nBlood <= 0)
 			m_bDead = true;
         if(m_pOwner!=nullptr)

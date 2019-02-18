@@ -58,5 +58,6 @@
         <file>FC16UIResource/tileset/towers/tower-1.png</file>
         <file>FC16UIResource/tileset/towers/tower2.png</file>
         <file>FC16UIResource/tileset/towers/tower3.png</file>
+        <file>FC16UIResource/csdn.qss</file>
     </qresource>
 </RCC>

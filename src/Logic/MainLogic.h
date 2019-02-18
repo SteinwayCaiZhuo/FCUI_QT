@@ -2,7 +2,8 @@
 
 #include "../Data/DataDef.h"
 #include "../UI/StartScene.h"
-#include "../UI/PlayScene.h"
+
+class PlayScene;
 namespace UI {
     class MainLogic
 	{

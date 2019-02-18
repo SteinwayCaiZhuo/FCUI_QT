@@ -11,6 +11,8 @@
 #include <QTimer>
 #include <QBrush>
 #include <QIcon>
+#include <QtAlgorithms>
+#include <cstdlib>
 #include "StartScene.h"
 
 int PlayScene::commandsCount = 0;
@@ -22,6 +24,7 @@ PlayScene::PlayScene(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle("FC16UI-PLAY");
     this->setGeometry(QRectF(QPoint(160,90),QSize(1600, 900)).toRect());
+    this->setFixedSize(QSize(1600, 900));
 
     UI::MainLogic::GetInstance()->logFileStream<<"Main thread is "<<QThread::currentThread()<<std::endl;
 
@@ -33,7 +36,7 @@ PlayScene::PlayScene(QWidget *parent) :
 
     originPoint = QPointF(0,0);
     wheelScaleRate = 0.0005;
-    autoView = false;
+    autoView = true;
     singleMode = true;
     //Game setting
     exit_thread_flag = true;
@@ -94,14 +97,14 @@ PlayScene::PlayScene(QWidget *parent) :
     autoViewButton->setGeometry(QRectF(QPointF(1400, 0), QSizeF(80, 30)).toRect());
     connect(autoViewButton, SIGNAL(clicked(bool)),this,
             SLOT(autoViewButtonClicked()));
-    autoViewButton->setVisible(false);
+    autoViewButton->setVisible(true);
 
     singleContinousButton = new QPushButton("Continous", this);
     singleContinousButton->setGeometry(QRectF(QPointF(1500, 0), QSizeF(80, 30)).toRect());
     connect(singleContinousButton, SIGNAL(clicked(bool)),this,
             SLOT(singleContinousButtonClicked()));
 
-    roundInfo = new QLabel(this);
+    roundInfo = new QTextBrowser(this);
     roundInfo->setText("GAME NOT START");
     roundInfo->setGeometry(QRectF(QPointF(1300, 50), QSizeF(200, 30)).toRect());
     roundInfo->show();
@@ -163,8 +166,8 @@ PlayScene::PlayScene(QWidget *parent) :
 
     autoViewMaxStep = 0;
     autoViewCurrentStep = 0;
-    autoViewInterval = 1;
-    focusTime = 25;
+    autoViewInterval = 10;//msec per Operation
+    focusTime = 300;//msec
     autoViewTimer = new QTimer(this);
     connect(autoViewTimer, SIGNAL(timeout()), this, SLOT(autoViewAdjust()));
 }
@@ -175,6 +178,10 @@ void PlayScene::init()
     this->originPoint = QPoint(0,0);
     this->pixelSize = defaultPixelSize;
     thread_pause = false;
+    singleMode = true;
+    singleContinousButton->setText("Continous");
+    autoView = true;
+    autoViewButton->setText("Manual");
     roundInfo->setText("GAME NOT START");
     commandInfoList->clear();
 }
@@ -327,6 +334,8 @@ void PlayScene::myUpdateGeometry()
         {
             try
         {
+            //if((*(it.value()->actions().size())
+
             it.value()->setGeometry(QRect(mapToGeo(tsoldier->m_Position),pixelSize.toSize()));
         }
         catch(const std::exception&){}
@@ -334,11 +343,16 @@ void PlayScene::myUpdateGeometry()
         else
         {
             qDebug()<<"Fail to update soldier geometry in update geometry";
-            //soldiers.remove(it.key());
+
         }
     }
 
-
+    for(MoveSoldier* move : MoveSoldier::moveToDelete)
+    {    delete move;
+    }
+    MoveSoldier::moveToDelete.clear();
+    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
+        thread_pause = true;
 }
 
 void PlayScene::raiseWidgetss()
@@ -357,15 +371,30 @@ void PlayScene::raiseWidgetss()
     this->towerInfo->raise();
 }
 
+void PlayScene::focusOn(const QPointF &point)
+{
+    if(autoView && (mapToGeo(point)-QPointF(450,450)).manhattanLength()>200)
+    {
+        pixelSizeDiff = autoViewPixelSize-pixelSize;
+        targetFocusPoint = point;
+        autoViewInterval = 20;
+        autoViewMaxStep = std::max(1.0f, UI::MainLogic::GetInstance()->speed*focusTime/autoViewInterval);
+        autoViewCurrentStep = 0;
+        thread_pause = true;
+        qDebug()<<"In focus on, set thread_pause = true";
+        autoViewTimer->start(autoViewInterval);
+
+    }
+}
 void PlayScene::focusOn(const QPoint &point)
 {
     if(autoView && (mapToGeo(point)-QPoint(450,450)).manhattanLength()>200)
     {
         pixelSizeDiff = autoViewPixelSize-pixelSize;
         targetFocusPoint = point;
-        autoViewMaxStep = focusTime;
-        autoViewCurrentStep = 0;
         autoViewInterval = 20;
+        autoViewMaxStep = focusTime/autoViewInterval;
+        autoViewCurrentStep = 0;
         thread_pause = true;
         qDebug()<<"In focus on, set thread_pause = true";
         autoViewTimer->start(autoViewInterval);
@@ -377,7 +406,6 @@ void PlayScene::autoViewAdjust()
 {
     if(!autoView || autoViewCurrentStep>=autoViewMaxStep || autoViewMaxStep<=0)
     {
-
         autoViewTimer->stop();
         return;
     }
@@ -387,7 +415,8 @@ void PlayScene::autoViewAdjust()
         pixelSize+= pixelSizeDiff/autoViewMaxStep;
         originPoint += (QPoint(450,450) - mapToGeo(targetFocusPoint))/(autoViewMaxStep-autoViewCurrentStep);
         autoViewCurrentStep++;
-        if(autoViewCurrentStep == autoViewMaxStep>0)
+        qDebug()<<"Auto view current Step is:"<<autoViewCurrentStep<<" -- maxStep is: "<<autoViewMaxStep;
+        if(autoViewCurrentStep >= autoViewMaxStep && autoViewMaxStep>0)
         {
             qDebug()<<"autoViewAdjust Finished, set thread_pause = false";thread_pause = false;
             autoViewCurrentStep = autoViewMaxStep = 0;
@@ -561,10 +590,12 @@ void PlayScene::commandUpdate(UI::Command*command)
 
     try
     {
-        commandInfoList->addItem(new QListWidgetItem(
-          "Round "+ QString::number(UI::MainLogic::GetInstance()->gameRound)+
-          ": Player-"+QString::number(command->m_pOwner->m_nID)+":"+
-           command->m_pOwner->m_strVecCommands[command]));
+        QListWidgetItem* item = new QListWidgetItem(
+                    "Round "+ QString::number(UI::MainLogic::GetInstance()->gameRound)+
+                    ": Player-"+QString::number(command->m_pOwner->m_nID)+":"+
+                     command->m_pOwner->m_strVecCommands[command]);
+        commandInfoList->addItem(item);
+        commandInfoList->setCurrentItem(item);
     }
     catch(const std::exception&)
     {}
@@ -574,34 +605,29 @@ void PlayScene::commandUpdate(UI::Command*command)
     case UI::CommandType::Move:
     {
 
-        UI::TSoldier* tsoldier = command->m_pMoveSoldier;
-
-        QLabel* uiSoldier = soldiers[tsoldier->m_nID];
-        QPoint translateVec;
+        QPointF translateVec;
         switch(command->m_nMoveDirection)
         {
         case UI::UP:
-            translateVec = QPoint(0,1)*command->m_nMoveDistance;
+            translateVec = QPointF(0,1)*command->m_nMoveDistance;
             break;
         case UI::DOWN:
-            translateVec = QPoint(0,-1)*command->m_nMoveDistance;
+            translateVec = QPointF(0,-1)*command->m_nMoveDistance;
             break;
         case UI::RIGHT:
-            translateVec = QPoint(1,0)*command->m_nMoveDistance;
+            translateVec = QPointF(1,0)*command->m_nMoveDistance;
             break;
         case UI::LEFT:
-            translateVec = QPoint(-1,0)*command->m_nMoveDistance;
+            translateVec = QPointF(-1,0)*command->m_nMoveDistance;
             break;
         default:
             break;
         }
-        QPropertyAnimation*posAnimation = new QPropertyAnimation(uiSoldier,"geometry");
-        posAnimation->setDuration(speed*500);
-        posAnimation->setStartValue(QRectF(mapToGeo(tsoldier->m_Position), pixelSize));
-        posAnimation->setEndValue(QRectF(mapToGeo(tsoldier->m_Position+translateVec), pixelSize));
-        tsoldier->m_Position += translateVec;
-        posAnimation->start(QAbstractAnimation::DeleteWhenStopped);
-        QTimer::singleShot(posAnimation->duration(), this, SLOT(resumeThread()));
+        MoveSoldier* moveAction = new MoveSoldier(&command->m_pMoveSoldier->m_Position, speed*500);
+        moveAction->setValue(0, command->m_pMoveSoldier->m_Position);
+        moveAction->setValue(1, command->m_pMoveSoldier->m_Position+translateVec);
+        moveAction->startMove();
+
     }
         break;
     case UI::CommandType::Upgrade:
@@ -695,30 +721,28 @@ void PlayScene::commandUpdate(UI::Command*command)
         UI::TTower* victim_t = dynamic_cast<UI::TTower*>(command->m_pVictimObject);
         if(attacker==nullptr)
          { qDebug()<<"attacker== nullptr";thread_pause = false;return;}
-        QLabel* attackerLabel = soldiers[attacker->m_nID];
-        QPoint attackerPos = attackerLabel->pos();
         QLabel* victimLabel = nullptr;
-        QPoint vicPos = attackerLabel->pos();
+        QPointF vicPos;
+
         if(victim_s!=nullptr)
         {
             victimLabel = soldiers[victim_s->m_nID];
-            vicPos = victimLabel->pos();
+            vicPos = victim_s->m_Position;
         }
         else if(victim_t !=nullptr)
         {
             victimLabel = towers[victim_t->m_nID];
-            vicPos = mapToGeo(victim_t->m_Position);
+            vicPos = victim_t->m_Position;
         }
         else
         {
             return;
         }
-        QPropertyAnimation* animation1 = new QPropertyAnimation(attackerLabel, "pos");
-        animation1->setDuration(speed*1000);
-        animation1->setKeyValueAt(0, attackerPos);
-        animation1->setKeyValueAt(0.5, vicPos);
-        animation1->setKeyValueAt(1, attackerPos);
-        animation1->start(QAbstractAnimation::DeleteWhenStopped);
+        MoveSoldier* moveAction = new MoveSoldier(&command->m_pAttackObject->m_Position, speed*1000);
+        moveAction->setValue(0, command->m_pAttackObject->m_Position);
+        moveAction->setValue(0.5, vicPos);
+        moveAction->setValue(1, command->m_pAttackObject->m_Position);
+        moveAction->startMove();
 
         if(victimLabel!=nullptr)
         {
@@ -728,7 +752,7 @@ void PlayScene::commandUpdate(UI::Command*command)
             effect->setOpacity(0);
             victimLabel->setGraphicsEffect(effect);
             QPropertyAnimation*animation = new QPropertyAnimation(effect, "opacity");
-            animation->setDuration(animation1->duration());
+            animation->setDuration(moveAction->duration);
             animation->setStartValue(1);
             int maxNum = 1000;
             int i;
@@ -746,7 +770,7 @@ void PlayScene::commandUpdate(UI::Command*command)
             opacityTimer->start(20);
         }
 
-        QTimer::singleShot(animation1->duration(),this, SLOT(resumeThread()));
+        QTimer::singleShot(moveAction->duration, this, SLOT(resumeThread()));
 
 
         break;
@@ -805,16 +829,21 @@ void PlayScene::clearSoldiers()
 
 void PlayScene::resumeThread()
 {
-    qDebug()<<"Resume thread: set thread_pause = false";thread_pause = false;
-    opacityLabels.clear();
-    opacityTimer->stop();
+    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
+        return;
+     qDebug()<<"ResumeThread: set thread_pause = false";thread_pause = false;
+     opacityLabels.clear();
+     opacityTimer->stop();
 }
 
 void PlayScene::resumeThreadAutoView()
 {
-    qDebug()<<"ResumeThreadAutoView: set thread_pause = false";thread_pause = false;
-    opacityLabels.clear();
-    opacityTimer->stop();
+    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
+        return;
+     qDebug()<<"ResumeThreadAutoView: set thread_pause = false";thread_pause = false;
+     opacityLabels.clear();
+     opacityTimer->stop();
+
 }
 
 void PlayScene::opacityUpdate()
@@ -837,6 +866,12 @@ QPoint PlayScene::mapToGeo(const QPoint& pos)
                   originPoint.y()+ (mapSize.height() -pos.y())*pixelSize.height());
 
 }
+QPoint PlayScene::mapToGeo(const QPointF& pos)
+{
+    return QPoint(originPoint.x()+ pos.x()*pixelSize.width(),
+             originPoint.y()+ (mapSize.height() -pos.y())*pixelSize.height());
+
+}
 
 void PlayScene::mousePressEvent(QMouseEvent *event)
 {
@@ -852,7 +887,7 @@ void PlayScene::mousePressEvent(QMouseEvent *event)
         {
             try
             {
-                if(soldiers.find(soldier->m_nID)!=soldiers.end()&&(soldiers[soldier->m_nID]->geometry().center()-mousePos).manhattanLength()<=(pixelSize.width()+pixelSize.height()))
+                if(soldiers.find(soldier->m_nID)!=soldiers.end()&&(soldiers[soldier->m_nID]->geometry().center()-mousePos).manhattanLength()<=(pixelSize.width()+pixelSize.height())*0.25)
                     updateSoldierInfo(soldier);
             }
             catch(const std::exception&){}
@@ -1023,7 +1058,7 @@ void Worker::doWork()
         qDebug()<<"commands update begin";
         for(UI::Command* command: UI::MainLogic::GetInstance()->commands)
         {
-            QPoint focusPos;
+            QPointF focusPos;
                 switch(command->m_nCommandType)
                 {
                 case UI::CommandType::Attack:
@@ -1050,15 +1085,16 @@ void Worker::doWork()
                     break;
                 }
                 //qDebug()<<"before thread_pause:"<<playScene->thread_pause;
-               // QMetaObject::invokeMethod(playScene, "focusOn", Qt::QueuedConnection, Q_ARG(QPoint, focusPos));
+                QMetaObject::invokeMethod(playScene, "focusOn", Qt::QueuedConnection, Q_ARG(QPointF, focusPos));
                // qDebug()<<"after thread_pause:"<<playScene->thread_pause;
-               // QThread::currentThread()->msleep(50);
-               // qDebug()<<"after Sleep: thread_pause:"<<playScene->thread_pause;
-                //while(playScene->thread_pause)
-                //{
-                //    qDebug()<<"In while 1: thread_pause:"<<playScene->thread_pause;
-                //    QThread::currentThread()->msleep(50);
-                //}
+                QThread::currentThread()->msleep(50);
+                qDebug()<<"after Sleep: thread_pause:"<<playScene->thread_pause;
+                int i = 0;
+                while(playScene->thread_pause)
+                {
+                    qDebug()<<"In while "<<i++<<": thread_pause:"<<playScene->thread_pause;
+                    QThread::currentThread()->msleep(50);
+                }
                 qDebug()<<"A Command update begin";
                 try
                 {
@@ -1107,3 +1143,101 @@ void Worker::doWork()
 }
 
 
+QSet<MoveSoldier*> MoveSoldier::moveToDelete;
+
+
+MoveSoldier::MoveSoldier(QPointF*moveObject, int duration)
+{
+    this->moveObject = moveObject;
+    this->duration = duration;
+    this->interval = 10;//default
+    this->currStep=0;
+    this->maxStep=duration/interval;
+    this->moveTimer = new QTimer(this);
+    connect(moveTimer,SIGNAL(timeout()), this, SLOT(updateValue()));
+}
+
+
+MoveSoldier::~MoveSoldier()
+{
+    delete moveTimer;
+}
+
+
+bool compareValue(const MoveSoldier::ValueType& a,
+                  const MoveSoldier::ValueType&b)
+{
+    if(a.first < b.first)
+        return true;
+    else if(a.first>b.first)
+        return false;
+    else
+        return 0;
+}
+
+
+void MoveSoldier::setValue(float step, const QPointF &value)
+{
+    if(step>=0 && step <=1)
+        this->values.push_back(ValueType(step,value));
+    std::sort(values.begin(),values.end(),compareValue);
+}
+
+
+
+void MoveSoldier::startMove()
+{
+    qDebug()<<"Start moveSoldier: set thread_pause = true";
+    UI::MainLogic::GetInstance()->playScene->thread_pause = true;
+    this->currStep = 0;
+    qDebug()<<"From "<<values[0]<<" to "<<values[values.size()-1];
+    moveTimer->start(interval);
+}
+
+
+QPair<MoveSoldier::ValueType, MoveSoldier::ValueType> MoveSoldier::getNeighbor()
+{
+    int index = 0;
+    int valueCount = values.size();
+    if(valueCount<2)
+    {
+        return QPair<ValueType, ValueType>(ValueType(0,*moveObject), ValueType(1,*moveObject));
+
+    }
+    else if(values[0].first>currStep/maxStep)
+    {
+
+        return QPair<ValueType, ValueType>(ValueType(0,*moveObject), values[0]);
+    }
+    else if(values[valueCount-1].first <currStep/maxStep)
+        return QPair<ValueType, ValueType>(values[valueCount-1],ValueType(1, *moveObject));
+    while(index+1<valueCount)
+    {
+        if(values[index+1].first<currStep/maxStep)
+            index++;
+        else
+        {
+            return QPair<ValueType, ValueType>(values[index], values[index+1]);
+        }
+    }
+    return QPair<ValueType,ValueType>(values[0],values[values.size()-1]);
+}
+
+void MoveSoldier::updateValue()
+{
+    if(currStep>=maxStep && maxStep > 0)
+    {
+        moveTimer->stop();
+        moveToDelete.insert(this);
+        UI::MainLogic::GetInstance()->playScene->thread_pause = false;
+    }
+    else if(currStep<maxStep)
+    {
+        QPair<ValueType,ValueType>neighbors = getNeighbor();
+        *moveObject = neighbors.first.second +
+             (currStep/maxStep-neighbors.first.first)/(neighbors.second.first-neighbors.first.first)
+                *(neighbors.second.second-neighbors.first.second);
+
+        currStep++;
+    }
+}
