@@ -16,6 +16,8 @@
 #include <QSet>
 #include<QTimer>
 #include <QDebug>
+#include <QTextEdit>
+#include <QComboBox>
 #include <utility>
 #include "../Data/DataDef.h"
 #include "../Logic/MainLogic.h"
@@ -67,6 +69,7 @@ public slots:
     void clearSoldiers();
     void resumeThread();
     void resumeThreadAutoView();
+    void goToLoopBeginCallback();
     void opacityUpdate();
     void myUpdateGeometry();
     void focusOn(const QPoint&point);
@@ -77,10 +80,12 @@ public slots:
     void raiseWidgetss();
     virtual void mousePressEvent(QMouseEvent*event);
     virtual void wheelEvent(QWheelEvent *event);
+    virtual void keyPressEvent(QKeyEvent*event);
     friend class Worker;
     friend class MoveSoldier;
 private:
     Ui::PlayScene *ui;
+    QMainWindow* statusWindow;
     QPushButton* startGameButton;
     QPushButton* resumeGameButton;
     QPushButton* goBackButton;
@@ -88,6 +93,8 @@ private:
     QPushButton* speedDownButton;
     QPushButton* autoViewButton;
     QPushButton* singleContinousButton;
+    QComboBox* roundComboBox;
+
     QLabel* mapBackGround;
     QLabel* rightBackGround;
     QTextBrowser* roundInfo;
@@ -100,6 +107,7 @@ private:
 
     std::atomic<bool>exit_thread_flag;
     std::atomic<bool>thread_pause;
+    std::atomic<bool>goToLoopBegin_flag;
 
     QTimer * opacityTimer;
     QTimer* updateGeometryTimer;
@@ -112,6 +120,7 @@ private:
 
     QVector<QAbstractAnimation*>animations;
     float wheelScaleRate;
+    float translateScaleRate;
 
     static int commandsCount;
 

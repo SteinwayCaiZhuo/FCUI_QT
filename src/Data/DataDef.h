@@ -4,6 +4,8 @@
 #include <QVector>
 #include <fstream>
 #include <QString>
+#include <QFile>
+#include <QTextStream>
 #include <string>
 #include <sstream>
 #include <tchar.h>
@@ -11,6 +13,7 @@
 #include <QException>
 #include <QPointF>
 #include <QObject>
+#include <QDebug>
 #define SOLDIER_SET_START 17
 #define SOLDIER_SET_COL 7
 
