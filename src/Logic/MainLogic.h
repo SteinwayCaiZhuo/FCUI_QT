@@ -27,6 +27,7 @@ namespace UI {
         QMap<int, UI::TSoldier*>soldiers;
         QVector<UI::TPlayer*>players;
         QVector<UI::Command*>commands;
+        QMap<int, QString>fileTemp;
         QString mapFile;
 	public:
 
@@ -43,9 +44,10 @@ namespace UI {
 
 
 		void LoadData();
+        void LoadDateToRounds();
 		bool LogicUpdate();
+        bool LogicUpdate(const int& round);
         void parseLines(const std::string& mark_type, const int& mark_lines);
-
 		void clearData();
 		void initData();
         void WriteLog(QString& message);
