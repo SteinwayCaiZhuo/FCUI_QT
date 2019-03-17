@@ -5,7 +5,7 @@
 {
 	int PLAYER_NUM = 4;
 	int MAX_ROUND = 300;
-	int TOWER_NUM = 19;
+    int TOWER_NUM = 9;
     QString logFileName = "Log/log.txt";
 
     QMap<QString, int>TPlayer::LUTPLAYER;
@@ -210,32 +210,33 @@
     switch (id)
     {
     case 0:
-      this->m_Position = QPointF(6, 89);
+      this->m_Position = QPointF(33, 46);
       break;
     case 1:
-      this->m_Position = QPointF(20, 86);
+      this->m_Position = QPointF(24, 38);
       break;
     case 2:
-      this->m_Position = QPointF(33, 92);
+      this->m_Position = QPointF(3, 34);
       break;
     case 3:
-      this->m_Position = QPointF(44, 77);
+      this->m_Position = QPointF(11, 25);
       break;
     case 4:
-      this->m_Position = QPointF(61, 74);
+      this->m_Position = QPointF(15, 3);
       break;
     case 5:
-      this->m_Position = QPointF(71, 88);
+      this->m_Position = QPointF(24, 11);
       break;
     case 6:
-      this->m_Position = QPointF(83, 77);
+      this->m_Position = QPointF(46, 16);
       break;
     case 7:
-      this->m_Position = QPointF(15, 59);
+      this->m_Position = QPointF(38, 25);
       break;
     case 8:
-      this->m_Position = QPointF(15, 43);
+      this->m_Position = QPointF(24, 25);
       break;
+
     case 9:
       this->m_Position = QPointF(28, 51);
       break;

@@ -25,18 +25,19 @@ PlayScene::PlayScene(QWidget *parent) :
     this->setWindowTitle("FC16UI-PLAY");
     this->setGeometry(QRectF(QPoint(150,90),QSize(900, 900)).toRect());
 
+    qDebug()<<"In PlayScene():, this: "<<this;
+
     statusWindow = new QMainWindow(this);
     statusWindow->setWindowTitle("FC16UI-STATUS");
     statusWindow->setGeometry(QRect(QPoint(1100, 90), QSize(700,1000)));
-
 
     UI::MainLogic::GetInstance()->logFileStream<<"Main thread is "<<QThread::currentThread()<<std::endl;
 
     UI::MainLogic::GetInstance()->playScene = this;
 
     //Map setting
-    mapSize = QSizeF(100, 100);
-    pixelSize = QSizeF(9,9);
+    mapSize = QSizeF(50, 50);
+    pixelSize = QSizeF(18,18);
 
     originPoint = QPointF(0,0);
     wheelScaleRate = 0.0005;
@@ -48,7 +49,7 @@ PlayScene::PlayScene(QWidget *parent) :
     goToLoopBegin_flag = false;
 
     QImage backImg;
-    if(backImg.load(":/FC16UIResource/background.png"))
+    if(backImg.load(":/FC16UIResource/newNoTower.png"))
     {
         mapBackGround = new QLabel(this);
         mapBackGround->setGeometry(QRectF(originPoint,
@@ -57,16 +58,8 @@ PlayScene::PlayScene(QWidget *parent) :
         mapBackGround->setPixmap(QPixmap::fromImage(backImg));
     }
 
-    QImage rightBackImg;
-    if(rightBackImg.load(":/FC16UIResource/back/rightBack.jpg"))
-    {
-        rightBackGround = new QLabel(this);
-        rightBackGround->setGeometry(QRect(mapBackGround->geometry().topRight(),
-                                           this->geometry().bottomRight()-this->geometry().topLeft()));
-        rightBackGround->setScaledContents(true);
-        rightBackGround->setPixmap(QPixmap::fromImage(rightBackImg));
-        rightBackGround->hide();
-    }
+    qDebug()<<"Loaded backImg";
+
 
     goBackButton = new QPushButton("BACK", statusWindow);
     goBackButton->setGeometry(QRectF(QPointF(0, 0), QSizeF(80, 30)).toRect());
@@ -112,6 +105,8 @@ PlayScene::PlayScene(QWidget *parent) :
     connect(singleContinousButton, SIGNAL(clicked(bool)),this,
             SLOT(singleContinousButtonClicked()));
     singleContinousButton->show();
+
+    qDebug()<<"Loaded buttons";
 
     roundComboBox = new QComboBox(statusWindow);
     roundComboBox->setGeometry(QRect(QPoint(600, 50), QSize(100,30)));
@@ -159,6 +154,7 @@ PlayScene::PlayScene(QWidget *parent) :
     towerInfo->setGraphicsEffect(effectSoldierInfo);
     soldierInfo->hide();
 
+    qDebug()<<"Loaded other UI components.";
 
     Worker* worker = new Worker;
     worker->moveToThread(&workThread);
@@ -170,7 +166,7 @@ PlayScene::PlayScene(QWidget *parent) :
     workThread.start();
     thread_pause = false;
 
-
+    qDebug()<<"Loaded worker";
 
     opacityTimer = new QTimer(this);
     connect(opacityTimer, SIGNAL(timeout()), this, SLOT(opacityUpdate()));
@@ -189,6 +185,8 @@ PlayScene::PlayScene(QWidget *parent) :
     focusTime = 300;//msec
     autoViewTimer = new QTimer(this);
     connect(autoViewTimer, SIGNAL(timeout()), this, SLOT(autoViewAdjust()));
+
+    qDebug()<<"Loaded timers.";
 
     statusWindow->show();
 }
@@ -346,7 +344,7 @@ void PlayScene::myUpdateGeometry()
         ttower = UI::MainLogic::GetInstance()->towers[it.key()];
         try
         {
-            it.value()->setGeometry(QRect(mapToGeo(ttower->m_Position-QPoint(1,1)),(pixelSize*3).toSize()));
+            it.value()->setGeometry(QRect(mapToGeo(ttower->m_Position+QPoint(-1,1)),(pixelSize*3).toSize()));
         }
         catch(const std::exception&){}
     }
@@ -380,6 +378,50 @@ void PlayScene::myUpdateGeometry()
     MoveSoldier::moveToDelete.clear();
     if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
         thread_pause = true;
+
+    for(auto it = towers.begin();it!=towers.end();it++)
+    {
+        int id = it.key();
+        qDebug()<<"id = "<<id;
+        if(towerBars.keys().contains(id))
+        {
+            qDebug()<<"TowerBars contain";
+            towerBars[id]->setGeometry(QRect(it.value()->geometry().topLeft(), QSize(pixelSize.width()*3*UI::MainLogic::GetInstance()->towers[id]->m_nBlood/300.0, pixelSize.height())));
+            towerBars[id]->raise();
+            towerBars[id]->show();
+            qDebug()<<"Geometry is "<<towerBars[id]->geometry();
+        }
+        else
+        {
+            QImage img;
+            if(img.load(":/FC16UIResource/red.png"))
+            {
+                towerBars[id]=new QLabel(this);
+                towerBars[id]->setGeometry(0,0,0,0);
+                towerBars[id]->setScaledContents(true);
+                towerBars[id]->raise();
+                towerBars[id]->show();
+                towerBars[id]->setPixmap(QPixmap::fromImage(img));
+                QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
+                effect->setOpacity(0.6);
+                towerBars[id]->setGraphicsEffect(effect);
+                qDebug()<<"Load red succeeded";
+            }
+            else
+            {
+                qDebug()<<"Load red failed.";
+            }
+        }
+    }
+    for(auto it = towerBars.begin();it!=towerBars.end();it++)
+    {
+        if(!towers.keys().contains(it.key()))
+        {
+            delete it.value();
+            towerBars.remove(it.key());
+        }
+    }
+
 }
 
 void PlayScene::raiseWidgetss()
@@ -639,15 +681,19 @@ void PlayScene::commandUpdate(UI::Command*command)
         {
         case UI::UP:
             translateVec = QPointF(0,1)*command->m_nMoveDistance;
+            qDebug()<<"MoveMove UP:";
             break;
         case UI::DOWN:
             translateVec = QPointF(0,-1)*command->m_nMoveDistance;
+            qDebug()<<"MoveMove DOWN";
             break;
         case UI::RIGHT:
             translateVec = QPointF(1,0)*command->m_nMoveDistance;
+            qDebug()<<"MoveMove RIGHT";
             break;
         case UI::LEFT:
             translateVec = QPointF(-1,0)*command->m_nMoveDistance;
+            qDebug()<<"MoveMove LEFT";
             break;
         default:
             break;
@@ -655,6 +701,11 @@ void PlayScene::commandUpdate(UI::Command*command)
         MoveSoldier* moveAction = new MoveSoldier(&command->m_pMoveSoldier->m_Position, speed*500);
         moveAction->setValue(0, command->m_pMoveSoldier->m_Position);
         moveAction->setValue(1, command->m_pMoveSoldier->m_Position+translateVec);
+        if(true)//command->m_nMoveDirection == UI::LEFT)
+        {
+            qDebug()<<"m_pMovePosition:"<<command->m_pMoveSoldier->m_Position;
+            qDebug()<<"Dest:"<<command->m_pMoveSoldier->m_Position+translateVec;
+        }
         moveAction->startMove();
 
     }
@@ -666,7 +717,7 @@ void PlayScene::commandUpdate(UI::Command*command)
         {
             QLabel* upgradeLabel = new QLabel(this);
             upgradeLabel->setScaledContents(true);
-            upgradeLabel->setGeometry(QRect(mapToGeo(command->m_pUpgradeTower->m_Position-QPoint(1,1)),pixelSize.toSize()*3));
+            upgradeLabel->setGeometry(QRect(mapToGeo(command->m_pUpgradeTower->m_Position+QPoint(-1,1)),pixelSize.toSize()*3));
             upgradeLabel->setPixmap(QPixmap::fromImage(img));
             upgradeLabel->show();
             upgradeLabel->raise();
@@ -705,7 +756,7 @@ void PlayScene::commandUpdate(UI::Command*command)
         if(img.load(":/FC16UIResource/produce.png"))
         {
             QLabel* produceLabel = new QLabel(this);
-            produceLabel->setGeometry(QRect(mapToGeo(command->m_pProduceTower->m_Position-QPoint(1,1)),pixelSize.toSize()*3));
+            produceLabel->setGeometry(QRect(mapToGeo(command->m_pProduceTower->m_Position+QPoint(-1,1)),pixelSize.toSize()*3));
             produceLabel->setScaledContents(true);
             produceLabel->setPixmap(QPixmap::fromImage(img));
             produceLabel->show();
@@ -743,6 +794,95 @@ void PlayScene::commandUpdate(UI::Command*command)
     }
         break;
     case UI::CommandType::Attack:
+    {
+        QImage imgAttack, imgVictim;
+        if(imgAttack.load(":/FC16UIResource/attack.jpg"))
+        {
+            QLabel* attackLabel = new QLabel(this);
+            attackLabel->setGeometry(QRect(mapToGeo(command->m_pAttackObject->m_Position),pixelSize.toSize()*1));
+            attackLabel->setScaledContents(true);
+            attackLabel->setPixmap(QPixmap::fromImage(imgAttack));
+            attackLabel->show();
+            attackLabel->raise();
+
+            QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect();
+            effect->setOpacity(0);
+            attackLabel->setGraphicsEffect(effect);
+
+            QPropertyAnimation*animation = new QPropertyAnimation(effect, "opacity");
+            animation->setDuration(speed*1000);
+            int maxNum = 1000;
+            int i;
+            for(i = 0;i<maxNum/4;i++)
+            {
+                animation->setKeyValueAt(float(i)/maxNum,sqrtf(4*float(i)/maxNum) );
+            }
+            for(i=maxNum*3/4;i<=maxNum;i++)
+            {
+                animation->setKeyValueAt(float(i)/maxNum,sqrtf(4*(1-float(i)/maxNum)) );
+
+            }
+            opacityLabels.push_back(attackLabel);
+
+            animation->start(QAbstractAnimation::DeleteWhenStopped);
+            opacityTimer->start(20);
+
+            QTimer::singleShot(animation->duration(),this, SLOT(resumeThread()));
+
+        }
+        else
+        {
+            qDebug()<<"load attack FAIL";thread_pause = false;
+        }
+        if(imgVictim.load(":/FC16UIResource/victim.jpg"))
+        {
+            QLabel* victimLabel = new QLabel(this);
+            QPointF vicPos;
+            UI::TSoldier* victim_s = dynamic_cast<UI::TSoldier*>(command->m_pVictimObject);
+            UI::TTower* victim_t = dynamic_cast<UI::TTower*>(command->m_pVictimObject);
+            if(victim_s!=nullptr)
+            {
+                vicPos = victim_s->m_Position;
+            }
+            else if(victim_t !=nullptr)
+            {
+                vicPos = victim_t->m_Position;
+            }
+            victimLabel->setGeometry(QRect(mapToGeo(vicPos),pixelSize.toSize()*1));
+            victimLabel->setScaledContents(true);
+            victimLabel->setPixmap(QPixmap::fromImage(imgVictim));
+            victimLabel->show();
+            victimLabel->raise();
+
+            QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect();
+            effect->setOpacity(0);
+            victimLabel->setGraphicsEffect(effect);
+
+            QPropertyAnimation*animation = new QPropertyAnimation(effect, "opacity");
+            animation->setDuration(speed*1000);
+            int maxNum = 1000;
+            int i;
+            for(i = 0;i<maxNum/4;i++)
+            {
+                animation->setKeyValueAt(float(i)/maxNum,sqrtf(4*float(i)/maxNum) );
+            }
+            for(i=maxNum*3/4;i<=maxNum;i++)
+            {
+                animation->setKeyValueAt(float(i)/maxNum,sqrtf(4*(1-float(i)/maxNum)) );
+
+            }
+            opacityLabels.push_back(victimLabel);
+
+            animation->start(QAbstractAnimation::DeleteWhenStopped);
+
+        }
+        else
+        {
+            qDebug()<<"load victim FAIL";thread_pause = false;
+        }
+    }
+        break;
+        /*case 520://UI::CommandType::Attack:
     {
         UI::TSoldier* attacker = command->m_pAttackObject;
 
@@ -804,6 +944,7 @@ void PlayScene::commandUpdate(UI::Command*command)
 
         break;
     }
+    */
     default:
         qDebug()<<"Incorrect command type, thread_pause = false";thread_pause = false;
         break;
@@ -897,17 +1038,17 @@ void PlayScene::opacityUpdate()
 QPoint PlayScene::mapToGeo(const QPoint& pos)
 {
     return QPoint(originPoint.x()+ pos.x()*pixelSize.width(),
-                  originPoint.y()+ (mapSize.height() -pos.y())*pixelSize.height());
+                  originPoint.y()+ (mapSize.height()-1 -pos.y())*pixelSize.height());
 
 }
 QPoint PlayScene::mapToGeo(const QPointF& pos)
 {
     return QPoint(originPoint.x()+ pos.x()*pixelSize.width(),
-                  originPoint.y()+ (mapSize.height() -pos.y())*pixelSize.height());
+                  originPoint.y()+ (mapSize.height()-1 -pos.y())*pixelSize.height());
 
 }
 
-void PlayScene::mousePressEvent(QMouseEvent *event)
+void PlayScene::mousePressEvent(QMouseEvent *)
 {
     if(exit_thread_flag)
         return;
@@ -1183,12 +1324,12 @@ void Worker::doWork()
                 }
                 case UI::CommandType::Upgrade:
                 {
-                    focusPos = command->m_pUpgradeTower->m_Position-QPoint(1,1);
+                    focusPos = command->m_pUpgradeTower->m_Position+QPoint(-1,1);
                     break;
                 }
                 case UI::CommandType::Produce:
                 {
-                    focusPos = command->m_pProduceTower->m_Position-QPoint(1,1);
+                    focusPos = command->m_pProduceTower->m_Position+QPoint(-1,1);
                     break;
                 }
                 default:

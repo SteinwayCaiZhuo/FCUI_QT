@@ -39,7 +39,7 @@ public:
 public:
     QSizeF mapSize;
     const QSizeF autoViewPixelSize = QSizeF(25,25);
-    const QSizeF defaultPixelSize = QSizeF(9,9);
+    const QSizeF defaultPixelSize = QSizeF(18,18);
     QSizeF pixelSize;
     QPointF originPoint;
     bool autoView;
@@ -117,7 +117,7 @@ private:
 
     QMap<int, QLabel*>soldiers;
     QMap<int, QLabel*>towers;
-
+    QMap<int, QLabel*>towerBars;
     QVector<QAbstractAnimation*>animations;
     float wheelScaleRate;
     float translateScaleRate;
