@@ -42,3 +42,5 @@ FORMS += \
 
 RESOURCES += \
     FC16UIRes.qrc
+
+DISTFILES +=

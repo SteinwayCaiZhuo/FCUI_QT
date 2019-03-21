@@ -162,7 +162,9 @@ void MainLogic::LoadData()
     //ifsGameResult.close();
     if(playScene==nullptr)
     {
+        qDebug()<<"PlayScene is nullptr";
         playScene = new PlayScene();
+        qDebug()<<"In MainLogic, playScene is constructed.";
     }
     playScene->show();
     startScene->hide();
@@ -207,21 +209,21 @@ bool MainLogic::LogicUpdate()
 
 bool MainLogic::LogicUpdate(const int&round)
 {
-    qDebug()<<"In Logic Update , round: "<<round;
+    //qDebug()<<"In Logic Update , round: "<<round;
     if(fileTemp.keys().contains(round))
     {
-        qDebug()<<"The Information we get is ";
-        qDebug()<<fileTemp[round];
+        //qDebug()<<"The Information we get is ";
+        //qDebug()<<fileTemp[round];
         QStringList stringList = fileTemp[round].split("\n");
         int listSize = stringList.size()-1;
-        qDebug()<<"list size = "<<listSize;
+        //qDebug()<<"list size = "<<listSize;
         for(int lineCnt = 0;lineCnt<listSize;)
         {
             try
             {
                 std::string mark_type;
                 int mark_lines;
-                qDebug()<<"Analysing in top, lineCnt = "<<lineCnt;
+                //qDebug()<<"Analysing in top, lineCnt = "<<lineCnt;
                 if(lineCnt >= listSize)
                     break;
                 QString stringLine = stringList[lineCnt++];
@@ -233,7 +235,7 @@ bool MainLogic::LogicUpdate(const int&round)
                     {
                         //This should be an error;
                     }
-                    qDebug()<<"Reading in Round begin, lineCnt = "<<lineCnt;
+                    //qDebug()<<"Reading in Round begin, lineCnt = "<<lineCnt;
                     gameRound = stringList[lineCnt++].toInt();
                     WriteLog("Game round: " + std::to_string(gameRound));
                 }
@@ -241,7 +243,7 @@ bool MainLogic::LogicUpdate(const int&round)
                 {
                     if (mark_lines != 1)
                     {}
-                    qDebug()<<"Reading in PlayerAlive, lineCnt = "<<lineCnt;
+                    //qDebug()<<"Reading in PlayerAlive, lineCnt = "<<lineCnt;
                     playerAlive = stringList[lineCnt++].toInt();
 
                 }
@@ -259,16 +261,16 @@ bool MainLogic::LogicUpdate(const int&round)
                     std::string temp_str;
                     int id;
 
-                    qDebug()<<"Reading in PlayerInfo, lineCnt = "<<lineCnt;
+                    //qDebug()<<"Reading in PlayerInfo, lineCnt = "<<lineCnt;
 
                     for (int i = 0; i < mark_lines; i++)
                     {
-                        qDebug()<<"Reading in Player, lineCnt = "<<lineCnt;
+                        //qDebug()<<"Reading in Player, lineCnt = "<<lineCnt;
                         QString stringLine = stringList[lineCnt++];
                         temp_str = stringLine.split(" ").at(0).toStdString();
                         id = stringLine.split(" ").at(1).toInt();
 
-                        qDebug()<<"Generate an player, lineCnt = "<<lineCnt;
+                        //qDebug()<<"Generate an player, lineCnt = "<<lineCnt;
                         players[id]->Generate(stringList[lineCnt++].toStdString());
                         players[id]->m_nID = id;
 
@@ -281,7 +283,7 @@ bool MainLogic::LogicUpdate(const int&round)
                 {
                     for (int i = 0; i < mark_lines; i++)
                     {
-                        qDebug()<<"Reading a tower, lineCnt = "<<lineCnt;
+                        //qDebug()<<"Reading a tower, lineCnt = "<<lineCnt;
                         towers[i]->Generate(stringList[lineCnt++].toStdString());
                         towers[i]->SetVec2Position(i);
                         //WriteInfo(towers[i]);
@@ -304,7 +306,7 @@ bool MainLogic::LogicUpdate(const int&round)
                         try
                         {
                             TSoldier* newSoldier = new TSoldier();
-                            qDebug()<<"Reading a soldier, lineCnt = "<<lineCnt;
+                            //qDebug()<<"Reading a soldier, lineCnt = "<<lineCnt;
                             newSoldier->Generate(stringList[lineCnt++].toStdString());
                             soldiers[newSoldier->m_nID]= newSoldier;
 
@@ -333,7 +335,7 @@ bool MainLogic::LogicUpdate(const int&round)
                     UI::Command* newCommand = nullptr;
                     for (int i = 0; i < mark_lines; i++)
                     {
-                        qDebug()<<"Reading one player commands, lineCnt = "<<lineCnt;
+                        //qDebug()<<"Reading one player commands, lineCnt = "<<lineCnt;
                         std::string strLine = stringList[lineCnt++].toStdString();
                         {
                             std::stringstream strstrm(strLine);
@@ -341,7 +343,7 @@ bool MainLogic::LogicUpdate(const int&round)
                         }
                         for (int j = 0; j < mark_commands_lines; j++)
                         {
-                            qDebug()<<"Reading a command, lineCnt = "<<lineCnt;
+                            //qDebug()<<"Reading a command, lineCnt = "<<lineCnt;
                             std::string strLine = stringList[lineCnt++].toStdString();
                             std::stringstream strstrm(strLine);
                             strstrm >> mark_type_command;
@@ -427,7 +429,7 @@ bool MainLogic::LogicUpdate(const int&round)
             if(lineCnt>=listSize )
                 break;
         }
-        qDebug()<<"Break the for loop";
+        //qDebug()<<"Break the for loop";
         return true;
     }
     else
