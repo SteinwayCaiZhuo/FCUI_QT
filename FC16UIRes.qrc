@@ -80,5 +80,6 @@
         <file>FC16UIResource/victim.jpg</file>
         <file>FC16UIResource/newNoTower.png</file>
         <file>FC16UIResource/red.png</file>
+        <file>FC16UIResource/black.jpg</file>
     </qresource>
 </RCC>

@@ -394,6 +394,7 @@
             LUTSOLDIER["Blood"]= 4;
             LUTSOLDIER["X_Position"]= 5;
             LUTSOLDIER["Y_Position"]= 6;
+            LUTSOLDIER["Exp"] = 7;
 		}
 	}
     void TSoldier::Generate(const std::string&strLine)
@@ -442,7 +443,9 @@
 			case 6:
 				ssFormat >> y_pos;
 				break;
-
+            case 7:
+                ssFormat >> m_nExp;
+                break;
 			default:
 
 				break;

@@ -145,6 +145,8 @@ namespace UI
 		int m_nPopulation;
 		int m_nSoldierNum;
 
+        int m_VVView[50][50];
+
 		TPlayer();
 		virtual ~TPlayer();
         virtual void Generate(const std::string&);
@@ -165,6 +167,7 @@ namespace UI
 		SoldierType m_nSoldierType;
         QPointF m_Position;
 		int m_nLevel;
+        int m_nExp;
 		SoldierMoveType m_strctSoldierMove;
 		UIObject* m_pVictim;
 		bool m_bFreshman;

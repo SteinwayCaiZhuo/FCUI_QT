@@ -12,8 +12,13 @@ StartScene::StartScene(QWidget *parent) :
     this->setGeometry(QRect(QPoint(720, 405), QSize(480, 270)));
     this->setFixedSize(QSize(480, 270));
 
+    introLabel = new QLabel(this);
+    introLabel->setText("文件路径不要包含中文字符\n文件命名最好按照C语言命名标准");
+    introLabel->setGeometry(QRect(QPoint(130, 40),
+                                  QSize(240, 50)));
+
     openFileButton = new QPushButton("Select a File", this);
-    openFileButton->setGeometry(QRect(QPoint(160, 110),
+    openFileButton->setGeometry(QRect(QPoint(160, 140),
                                 QSize(160, 50)));
     connect(openFileButton, SIGNAL(clicked(bool)),
             this, SLOT(openFileButtonClicked()));

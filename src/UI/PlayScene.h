@@ -58,6 +58,7 @@ private slots:
     void goBackButtonClicked();
     void autoViewButtonClicked();
     void singleContinousButtonClicked();
+    void changeViewPlayerCallback();
 
 public slots:
     void playerUpdate(UI::TPlayer*player);
@@ -78,14 +79,18 @@ public slots:
     void updateTowerInfo(UI::TTower*);
     void updateSoldierInfo(UI::TSoldier*);
     void raiseWidgetss();
+    void minimizeStatusWindow();
     virtual void mousePressEvent(QMouseEvent*event);
     virtual void wheelEvent(QWheelEvent *event);
     virtual void keyPressEvent(QKeyEvent*event);
+    virtual void closeEvent(QCloseEvent*event);
+    void showStatusWindow();
     friend class Worker;
     friend class MoveSoldier;
 private:
     Ui::PlayScene *ui;
     QMainWindow* statusWindow;
+    QPushButton* minimizeStatusButton;
     QPushButton* startGameButton;
     QPushButton* resumeGameButton;
     QPushButton* goBackButton;
@@ -94,6 +99,7 @@ private:
     QPushButton* autoViewButton;
     QPushButton* singleContinousButton;
     QComboBox* roundComboBox;
+    QComboBox* viewPlayerBox;
 
     QLabel* mapBackGround;
     QLabel* rightBackGround;
@@ -118,6 +124,9 @@ private:
     QMap<int, QLabel*>soldiers;
     QMap<int, QLabel*>towers;
     QMap<int, QLabel*>towerBars;
+    bool useView;
+    int viewID;
+    QLabel* blackBlocks[50][50];
     QVector<QAbstractAnimation*>animations;
     float wheelScaleRate;
     float translateScaleRate;

@@ -62,6 +62,7 @@ void MainLogic::GameStart()
     //gameState = GameState::GAME_RUNNING;
     MainLogic::clearData();
     LoadData();
+    playScene->showStatusWindow();
 }
 
 void MainLogic::GameLoop()
@@ -274,6 +275,7 @@ bool MainLogic::LogicUpdate(const int&round)
                         players[id]->Generate(stringList[lineCnt++].toStdString());
                         players[id]->m_nID = id;
 
+
                         //WriteLog("Player " + std::to_string(id));
                         //WriteInfo(players[id]);
                     }
@@ -333,9 +335,40 @@ bool MainLogic::LogicUpdate(const int&round)
                         delete item;
                     commands.clear();
                     UI::Command* newCommand = nullptr;
+
+
+                    int id = 0;
                     for (int i = 0; i < mark_lines; i++)
                     {
                         //qDebug()<<"Reading one player commands, lineCnt = "<<lineCnt;
+                        QString strLineTest = stringList[lineCnt];
+                        if(strLineTest.split(" ").size()>10)
+                        {
+                            int mapSize = 50;
+                            for(int ii = 0 ;ii<mapSize;ii++)
+                            {
+                                QString stringLine2 = stringList[lineCnt++];
+                                QList<QString> numberStrs = stringLine2.split(" ");
+                                for(int jj = 0;jj<mapSize;jj++)
+                                {
+                                    players[id]->m_VVView[ii][jj] = numberStrs.at(jj).toInt();
+                                }
+                            }
+                            qDebug()<<"Successfully update viewMap for player "<<id;
+                        }
+                        else
+                        {
+                             for(int iii = 0;iii<4;iii++)
+                             {
+                                 for(int jjj= 0 ;jjj<50;jjj++)
+                                     for(int kkk = 0;kkk<50;kkk++)
+                                         players[iii]->m_VVView[jjj][kkk] = 1;
+                             }
+
+                        }
+                        id++;
+
+
                         std::string strLine = stringList[lineCnt++].toStdString();
                         {
                             std::stringstream strstrm(strLine);

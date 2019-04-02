@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QPushButton>
+#include <QLabel>
 
 namespace Ui {
 class StartScene;
@@ -21,6 +22,7 @@ private slots:
 private:
     Ui::StartScene *ui;
     QPushButton* openFileButton;
+    QLabel* introLabel;
 };
 
 #endif // STARTSCENE_H
