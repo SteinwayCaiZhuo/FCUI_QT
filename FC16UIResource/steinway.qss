@@ -1,0 +1,21 @@
+QMainWindow
+{
+    border:1px solid rgb(120,200,170);
+    border-radius: 5px;
+}
+QPushButton
+{
+    color: rgb(255,255,255);
+    background-color: rgb(40,40,40);
+    border:1px solid rgb(120,200,170);
+    border-radius: 5px;
+}
+
+QLineEdit
+{
+    color: rgb(255,255,255);
+    background-color: rgb(40,40,40);
+    border:1px solid rgb(120,200,170);
+    border-radius: 5px;
+
+}
