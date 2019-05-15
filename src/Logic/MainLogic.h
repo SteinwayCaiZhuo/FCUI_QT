@@ -2,22 +2,18 @@
 
 #include "../Data/DataDef.h"
 #include "../UI/StartScene.h"
+#include <QApplication>
 
 class PlayScene;
 namespace UI {
     class MainLogic
 	{
-		enum GameState
-		{
-			GAME_NOT_START,
-			GAME_RUNNING,
-			GAME_PAUSE
-		};
-	public:
-		GameState gameState;
+
+    public:
 		int gameRound;
-		int playerAlive;
-		float speed;
+        int playerAlive;
+        int MapSize;
+        QApplication*app;
 	public:
 		std::ofstream logFileStream;
 
@@ -36,17 +32,11 @@ namespace UI {
 		MainLogic();
         ~MainLogic();
 
-		void GameStart();
-		void GameLoop();
-		void GameOver();
-		void GamePause();
-		void GameResume();
-
-
 		void LoadData();
         void LoadDateToRounds();
 		bool LogicUpdate();
         bool LogicUpdate(const int& round);
+        void updateView();
         void parseLines(const std::string& mark_type, const int& mark_lines);
 		void clearData();
 		void initData();

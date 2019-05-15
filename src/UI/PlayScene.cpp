@@ -10,13 +10,19 @@
 #include <QGraphicsOpacityEffect>
 #include <QTimer>
 #include <QBrush>
+#include <QPainter>
 #include <QIcon>
+#include <QFont>
 #include <QtAlgorithms>
 #include <cstdlib>
 #include "StartScene.h"
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QGridLayout>
 
 int PlayScene::commandsCount = 0;
-
+extern int haveFrame;
+extern QPoint mapCenterPoint;
 PlayScene::PlayScene(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::PlayScene)
@@ -24,228 +30,288 @@ PlayScene::PlayScene(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowTitle("FC16UI-PLAY");
     this->setGeometry(QRectF(QPoint(150,90),QSize(900, 900)).toRect());
+    this->setWindowIcon(QIcon(":/FC16UIResource/Logo1.PNG"));
+    //qDebug()<<"In PlayScene():, this: "<<this;
 
-    qDebug()<<"In PlayScene():, this: "<<this;
+    //GameSetting and mapSetting
 
-    statusWindow = new QMainWindow(this);
-    statusWindow->hide();
-    statusWindow->setWindowTitle("FC16UI-STATUS");
-    statusWindow->setGeometry(QRect(QPoint(1100, 90), QSize(700,1000)));
-    statusWindow->setWindowFlags (Qt::SplashScreen);
-
-    UI::MainLogic::GetInstance()->logFileStream<<"Main thread is "<<QThread::currentThread()<<std::endl;
-
-    UI::MainLogic::GetInstance()->playScene = this;
-
-    //Map setting
-    mapSize = QSizeF(50, 50);
-    pixelSize = QSizeF(18,18);
-
-    originPoint = QPointF(0,0);
-    wheelScaleRate = 0.0005;
-    translateScaleRate = 1;
-    autoView = true;
-    singleMode = true;
-    //Game setting
-    exit_thread_flag = true;
-    goToLoopBegin_flag = false;
-
-    QImage backImg;
-    if(backImg.load(":/FC16UIResource/newNoTower.png"))
     {
-        mapBackGround = new QLabel(this);
-        mapBackGround->setGeometry(QRectF(originPoint,
-                                          QSizeF(mapSize.width()*pixelSize.width(), mapSize.height()*pixelSize.height())).toRect());
-        mapBackGround->setScaledContents(true);
-        mapBackGround->setPixmap(QPixmap::fromImage(backImg));
-        QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
-        effect->setOpacity(0.5);
-        mapBackGround->setGraphicsEffect(effect);
+        //Map setting
+        mapSize = QSizeF(50, 50);
+        pixelSize = QSizeF(18,18);
+
+        originPoint = QPointF(0,0);
+        wheelScaleRate = 0.0005;
+        translateScaleRate = 1;
+        autoView = true;
+        singleMode = true;
+        //Game setting
+        exit_thread_flag = false;
+        goToLoopBegin_flag = false;
+        playSpeed = 1.0;
     }
 
-    qDebug()<<"Loaded backImg";
+    //UI initial
 
-    minimizeStatusButton = new QPushButton("Minimize", statusWindow);
-    minimizeStatusButton->setGeometry(QRectF(QPointF(50, 100), QSizeF(80, 30)).toRect());
-    connect(minimizeStatusButton, SIGNAL(clicked(bool)),this,
-            SLOT(minimizeStatusWindow()));
-
-    goBackButton = new QPushButton("BACK", statusWindow);
-    goBackButton->setGeometry(QRectF(QPointF(0, 0), QSizeF(80, 30)).toRect());
-    connect(goBackButton, SIGNAL(clicked(bool)),this,
-            SLOT(goBackButtonClicked()));
-
-    startGameButton = new QPushButton("START", statusWindow);
-    startGameButton->setGeometry(QRectF(QPointF(100, 0), QSizeF(80, 30)).toRect());
-    connect(startGameButton, SIGNAL(clicked(bool)),
-            this, SLOT(startGameButtonClicked()));
-    startGameButton->show();
-
-    resumeGameButton = new QPushButton("PAUSE", statusWindow);
-    resumeGameButton->setGeometry(QRectF(QPointF(200, 0), QSizeF(80, 30)).toRect());
-    connect(resumeGameButton, SIGNAL(clicked(bool)),this,
-            SLOT(resumeGameButtonClicked()));
-    if(!singleMode)
-        resumeGameButton->setEnabled(false);
-    resumeGameButton->setVisible(false);
-
-    speedUpButton = new QPushButton("FASTER", statusWindow);
-    speedUpButton->setGeometry(QRectF(QPointF(400, 0), QSizeF(80, 30)).toRect());
-    connect(speedUpButton, SIGNAL(clicked(bool)),this,
-            SLOT(speedUpButtonClicked()));
-    speedUpButton->show();
-
-    speedDownButton = new QPushButton("SLOWER", statusWindow);
-    speedDownButton->setGeometry(QRectF(QPointF(300, 0), QSizeF(80, 30)).toRect());
-    connect(speedDownButton, SIGNAL(clicked(bool)),this,
-            SLOT(speedDownButtonClicked()));
-    speedDownButton->show();
-
-
-    autoViewButton = new QPushButton("Manual", statusWindow);
-    if(!autoView)autoViewButton->setText("Auto");
-    autoViewButton->setGeometry(QRectF(QPointF(500, 0), QSizeF(80, 30)).toRect());
-    connect(autoViewButton, SIGNAL(clicked(bool)),this,
-            SLOT(autoViewButtonClicked()));
-    autoViewButton->setVisible(true);
-
-    singleContinousButton = new QPushButton("Continous", statusWindow);
-    singleContinousButton->setGeometry(QRectF(QPointF(600, 0), QSizeF(80, 30)).toRect());
-    connect(singleContinousButton, SIGNAL(clicked(bool)),this,
-            SLOT(singleContinousButtonClicked()));
-    singleContinousButton->show();
-
-    qDebug()<<"Loaded buttons";
-
-    roundComboBox = new QComboBox(statusWindow);
-    roundComboBox->setGeometry(QRect(QPoint(600, 50), QSize(100,30)));
-    connect(roundComboBox, SIGNAL(currentTextChanged(QString)), this, SLOT(goToLoopBeginCallback()));
-
-    roundInfo = new QTextBrowser(statusWindow);
-    roundInfo->setText("GAME NOT START");
-    roundInfo->setGeometry(QRectF(QPointF(400, 50), QSizeF(200, 30)).toRect());
-    roundInfo->show();
-    roundInfo->setReadOnly(true);
-
-    useView = false;
-    if(useView)
     {
-        viewID = -1;
+        statusWindow = new QWidget(nullptr);
+        statusWindow->hide();
+        statusWindow->setWindowTitle("FC16UI-STATUS");
+        statusWindow->setGeometry(QRect(QPoint(1100, 90), QSize(700,1000)));
+        statusWindow->setWindowFlags (Qt::WindowMinimizeButtonHint);
+        statusWindow->setWindowIcon(QIcon(":/FC16UIResource/Logo1.PNG"));
 
-        viewPlayerBox = new QComboBox(statusWindow);
-        viewPlayerBox->setGeometry(QRect(QPoint(280, 50), QSize(100,30)));
-        connect(viewPlayerBox, SIGNAL(currentTextChanged(QString)), this, SLOT(changeViewPlayerCallback()));
 
-        for(int i = -1;i<4;i++)
+
+
+        QImage backImg;
+        if(backImg.load(":/FC16UIResource/newNoTower.png"))
         {
-            viewPlayerBox->addItem(QString::number(i));
+            mapBackGround = new QLabel(this);
+            mapBackGround->setGeometry(QRectF(originPoint,
+                                              QSizeF(mapSize.width()*pixelSize.width(), mapSize.height()*pixelSize.height())).toRect());
+            mapBackGround->setScaledContents(true);
+            mapBackGround->setPixmap(QPixmap::fromImage(backImg));
+            QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
+            effect->setOpacity(0.5);
+            mapBackGround->setGraphicsEffect(effect);
         }
-        QImage blackImg;
-        if(useView && blackImg.load(":/FC16UIResource/black.jpg"))
+
+        //qDebug()<<"Loaded backImg";
+
+        briefInfo = new QTextBrowser(this);
+        QGraphicsOpacityEffect* e_brief = new QGraphicsOpacityEffect(this);
+        e_brief->setOpacity(0.5);
+        briefInfo->setGraphicsEffect(e_brief);
+        briefInfo->setFixedSize(100,120);
+        briefInfo->setGeometry(QRect(QPoint(this->size().width()-briefInfo->size().width(),this->size().height()-briefInfo->size().height()), briefInfo->size()));
+
+        goBackButton = new QPushButton("BACK", statusWindow);
+        goBackButton->setGeometry(QRectF(QPointF(0, 0), QSizeF(80, 30)).toRect());
+        connect(goBackButton, SIGNAL(clicked(bool)),this,
+                SLOT(goBackButtonClicked()));
+        goBackButton->hide();
+        goBackButton->setEnabled(false);
+
+        startGameButton = new QPushButton("START", statusWindow);
+        startGameButton->setGeometry(QRectF(QPointF(100, 0), QSizeF(80, 30)).toRect());
+        connect(startGameButton, SIGNAL(clicked(bool)),
+                this, SLOT(startGameButtonClicked()));
+        startGameButton->show();
+
+        resumeGameButton = new QPushButton("PAUSE", statusWindow);
+        resumeGameButton->setGeometry(QRectF(QPointF(200, 0), QSizeF(80, 30)).toRect());
+        connect(resumeGameButton, SIGNAL(clicked(bool)),this,
+                SLOT(resumeGameButtonClicked()));
+
+        speedUpButton = new QPushButton("FASTER", statusWindow);
+        speedUpButton->setGeometry(QRectF(QPointF(400, 0), QSizeF(80, 30)).toRect());
+        connect(speedUpButton, SIGNAL(clicked(bool)),this,
+                SLOT(speedUpButtonClicked()));
+        speedUpButton->show();
+
+        speedDownButton = new QPushButton("SLOWER", statusWindow);
+        speedDownButton->setGeometry(QRectF(QPointF(300, 0), QSizeF(80, 30)).toRect());
+        connect(speedDownButton, SIGNAL(clicked(bool)),this,
+                SLOT(speedDownButtonClicked()));
+        speedDownButton->show();
+
+
+        autoViewButton = new QPushButton("Manual", statusWindow);
+        if(!autoView)autoViewButton->setText("Auto");
+        autoViewButton->setGeometry(QRectF(QPointF(500, 0), QSizeF(80, 30)).toRect());
+        connect(autoViewButton, SIGNAL(clicked(bool)),this,
+                SLOT(autoViewButtonClicked()));
+        autoViewButton->setVisible(true);
+
+        singleContinuousButton = new QPushButton("Continuous", statusWindow);
+        singleContinuousButton->setGeometry(QRectF(QPointF(600, 0), QSizeF(80, 30)).toRect());
+        connect(singleContinuousButton, SIGNAL(clicked(bool)),this,
+                SLOT(singleContinuousButtonClicked()));
+        singleContinuousButton->show();
+
+        QHBoxLayout* layout1 = new QHBoxLayout;
+        //layout1->addWidget(goBackButton);
+        startGameButton->setFixedSize(startGameButton->size());
+        resumeGameButton->setFixedSize(resumeGameButton->size());
+        speedDownButton->setFixedSize(speedDownButton->size());
+        speedUpButton->setFixedSize(speedUpButton->size());
+        autoViewButton->setFixedSize(autoViewButton->size());
+        singleContinuousButton->setFixedSize(singleContinuousButton->size());
+        layout1->addWidget(startGameButton);
+        layout1->addWidget(resumeGameButton);
+        layout1->addWidget(speedDownButton);
+        layout1->addWidget(speedUpButton);
+        layout1->addWidget(autoViewButton);
+        layout1->addWidget(singleContinuousButton);
+
+
+        //qDebug()<<"Loaded buttons";
+
+        roundComboBox = new QComboBox(statusWindow);
+        roundComboBox->setGeometry(QRect(QPoint(600, 50), QSize(100,30)));
+        connect(roundComboBox, SIGNAL(currentTextChanged(QString)), this, SLOT(goToLoopBeginCallback()));
+
+        roundInfo = new QTextBrowser(statusWindow);
+        roundInfo->setText("GAME NOT START");
+        roundInfo->setGeometry(QRectF(QPointF(400, 50), QSizeF(200, 30)).toRect());
+        roundInfo->show();
+        roundInfo->setReadOnly(true);
+
+        fontSizeBox = new QComboBox(statusWindow);
+        fontSizeBox->setGeometry(QRect(QPoint(100,50),QSize(100,30)));
+        for(int i = 1;i<=30;i++)
         {
-            for(int i = 0;i<50;i++)
+            fontSizeBox->addItem(QString::number(i));
+        }
+        fontSizeBox->setCurrentIndex(7);
+        connect(fontSizeBox, SIGNAL(currentIndexChanged(QString)),
+                this,SLOT(changeFontSizeCallback()));
+        fontSizeBox->hide();
+
+
+        playStateLabel = new QLabel(statusWindow);
+        playStateLabel->setGeometry(QRect(QPoint(0,50), QSize(100,30)));
+        playStateLabel->setVisible(false);
+        playStateLabel->setEnabled(false);
+        useView = true;
+        if(useView)
+        {
+            viewID = -1;
+
+            viewPlayerBox = new QComboBox(statusWindow);
+            viewPlayerBox->setGeometry(QRect(QPoint(280, 50), QSize(100,30)));
+            connect(viewPlayerBox, SIGNAL(currentTextChanged(QString)), this, SLOT(changeViewPlayerCallback()));
+
+            for(int i = -1;i<4;i++)
             {
-                for(int j = 0;j<50;j++)
-                {
-                    blackBlocks[i][j] = new QLabel(this);
-                    blackBlocks[i][j]->setGeometry(QRect(mapToGeo(QPoint(i,j)),pixelSize.toSize()));
-                    blackBlocks[i][j]->setScaledContents(true);
-                    blackBlocks[i][j]->setPixmap(QPixmap::fromImage(blackImg));
-                    QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
-                    effect->setOpacity(0.6);
-                    blackBlocks[i][j]->setGraphicsEffect(effect);
-                    blackBlocks[i][j]->hide();
-                }
+                viewPlayerBox->addItem(QString::number(i));
             }
+
         }
+
+        QHBoxLayout*layout2 = new QHBoxLayout;
+        viewPlayerBox->setFixedSize(viewPlayerBox->size());
+        layout2->addWidget(viewPlayerBox);
+        roundInfo->setFixedSize(roundInfo->size());
+        layout2->addWidget(roundInfo);
+        roundComboBox->setFixedSize(roundComboBox->size());
+        layout2->addWidget(roundComboBox);
+
+
+        playerInfoTable = new QTableWidget(statusWindow);
+        playerInfoTable->setRowCount(UI::TPlayer::properties.size()+1);
+        playerInfoTable->setColumnCount(4);
+        QStringList tableHorizonalHead, tableVerticleHead;
+        for(int i = 0;i<4;i++)
+        {
+            QString str = "Player "+QString::number(i);
+            tableHorizonalHead<<str;
+        }
+        tableVerticleHead = QStringList(UI::TPlayer::properties.values());
+        tableVerticleHead.append("TowerLabel");
+        playerInfoTable->setHorizontalHeaderLabels(tableHorizonalHead);
+        playerInfoTable->setVerticalHeaderLabels(tableVerticleHead);
+        playerInfoTable->setShowGrid(false);
+        playerInfoTable->setGeometry(QRect(QPoint(0,400), QSize(600, 500)));
+        playerInfoTable->setVisible(true);
+        playerInfoTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+        commandInfoList = new QListWidget(statusWindow);
+        commandInfoList->setGeometry(QRect(QPoint(0, 120), QSize(600, 270)));
+        commandInfoList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+        commandInfoList->setVisible(true);
+        QVBoxLayout* layout3 = new QVBoxLayout;
+        commandInfoList->setMinimumHeight(100);
+        layout3->addWidget(commandInfoList);
+        playerInfoTable->setFixedHeight(500);
+        layout3->addWidget(playerInfoTable);
+
+        QVBoxLayout*layout = new QVBoxLayout;
+        layout->addLayout(layout1);
+        layout->addLayout(layout2);
+        layout->addLayout(layout3);
+        statusWindow->setLayout(layout);
+
+        towerInfo = new QTextBrowser(this);
+        towerInfo->setGeometry(QRect(QPoint(0, 200), QSize(200, 50)));
+        towerInfo->setText("For tower");
+        QGraphicsOpacityEffect* effectTowerInfo = new QGraphicsOpacityEffect();
+        effectTowerInfo->setOpacity(0.5);
+        towerInfo->setGraphicsEffect(effectTowerInfo);
+        towerInfo->hide();
+        towerInfo->setReadOnly(true);
+
+        soldierInfo = new QTextBrowser(this);
+        soldierInfo->setGeometry(QRect(QPoint(0, 0), QSize(200, 50)));
+        soldierInfo->setText("For soldier");
+        QGraphicsOpacityEffect* effectSoldierInfo = new QGraphicsOpacityEffect();
+        effectSoldierInfo->setOpacity(0.5);
+        soldierInfo->setGraphicsEffect(effectSoldierInfo);
+        soldierInfo->hide();
+        soldierInfo->setReadOnly(true);
+
+        //qDebug()<<"Loaded other UI components.";
     }
 
-    playerInfoTable = new QTableWidget(statusWindow);
-    playerInfoTable->setRowCount(UI::TPlayer::properties.size()+1);
-    playerInfoTable->setColumnCount(4);
-    QStringList tableHorizonalHead, tableVerticleHead;
-    for(int i = 0;i<4;i++)
+    //Worker thread;
     {
-        QString str = "Player "+QString::number(i);
-        tableHorizonalHead<<str;
+        Worker* worker = new Worker;
+        //worker->mainLogic = mainLogic;
+        worker->playScene = this;
+        worker->moveToThread(&workThread);
+        connect(this, &PlayScene::runThreadStart, worker, &Worker::doWork);
+
+        connect(&workThread, SIGNAL(finished()), &workThread, SLOT(deleteLater()));
+        workThread.start();
+        //worker->doWork();
+        emit(runThreadStart());
     }
-    tableVerticleHead = QStringList(UI::TPlayer::properties.values());
-    tableVerticleHead.append("TowerLabel");
-    playerInfoTable->setHorizontalHeaderLabels(tableHorizonalHead);
-    playerInfoTable->setVerticalHeaderLabels(tableVerticleHead);
-    playerInfoTable->setShowGrid(false);
-    playerInfoTable->setGeometry(QRect(QPoint(0,400), QSize(600, 500)));
-    playerInfoTable->setVisible(true);
-    playerInfoTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    commandInfoList = new QListWidget(statusWindow);
-    commandInfoList->setGeometry(QRect(QPoint(0, 300), QSize(600, 99)));
-    commandInfoList->setVisible(true);
-    commandInfoList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    //Timers
+    {
+        opacityTimer = new QTimer(this);
+        connect(opacityTimer, SIGNAL(timeout()), this, SLOT(opacityUpdate()));
 
-    towerInfo = new QTextBrowser(this);
-    towerInfo->setGeometry(QRect(QPoint(0, 200), QSize(200, 50)));
-    towerInfo->setText("For tower");
-    QGraphicsOpacityEffect* effectTowerInfo = new QGraphicsOpacityEffect();
-    effectTowerInfo->setOpacity(0.5);
-    towerInfo->setGraphicsEffect(effectTowerInfo);
-    towerInfo->hide();
-    towerInfo->setReadOnly(true);
+        updateGeometryTimer = new QTimer(this);
+        connect(updateGeometryTimer, SIGNAL(timeout()),this, SLOT(myUpdateGeometry()));
+        updateGeometryTimer->start(5);
 
-    soldierInfo = new QTextBrowser(this);
-    soldierInfo->setGeometry(QRect(QPoint(0, 0), QSize(200, 50)));
-    soldierInfo->setText("For soldier");
-    QGraphicsOpacityEffect* effectSoldierInfo = new QGraphicsOpacityEffect();
-    effectSoldierInfo->setOpacity(0.5);
-    soldierInfo->setGraphicsEffect(effectSoldierInfo);
-    soldierInfo->hide();
-    soldierInfo->setReadOnly(true);
+        raiseTimer = new QTimer(this);
+        connect(raiseTimer, SIGNAL(timeout()),this, SLOT(raiseWidgetss()));
+        raiseTimer->start(2);
 
-    qDebug()<<"Loaded other UI components.";
+        raiseTimer2 = new QTimer(this);
+        connect(raiseTimer2, SIGNAL(timeout()),this, SLOT(raiseWidgets2()));
+        raiseTimer2->start(20);
 
-    Worker* worker = new Worker;
-    worker->moveToThread(&workThread);
-    connect(this, &PlayScene::runThreadStart, worker, &Worker::doWork);
+        autoViewMaxStep = 0;
+        autoViewCurrentStep = 0;
+        autoViewInterval = 20;//msec per Operation
+        focusTime = 300;//msec
+        autoViewTimer = new QTimer(this);
+        connect(autoViewTimer, SIGNAL(timeout()), this, SLOT(autoViewAdjust()));
 
-    //connect(worker,  SIGNAL(finishedWork()), &workThread, SLOT(quit());
-    //connect(worker, SIGNAL(finishedWork()), worker, SLOT(deleteLater()));
-    connect(&workThread, SIGNAL(finished()), &workThread, SLOT(deleteLater()));
-    workThread.start();
-    thread_pause = false;
+        viewTimer = new QTimer(this);
+        connect(viewTimer, SIGNAL(timeout()),this, SLOT(viewUpdate()));
+        viewTimer->start(50);
 
-    qDebug()<<"Loaded worker";
-
-    opacityTimer = new QTimer(this);
-    connect(opacityTimer, SIGNAL(timeout()), this, SLOT(opacityUpdate()));
-
-    updateGeometryTimer = new QTimer(this);
-    connect(updateGeometryTimer, SIGNAL(timeout()),this, SLOT(myUpdateGeometry()));
-    updateGeometryTimer->start(5);
-
-    raiseTimer = new QTimer(this);
-    connect(raiseTimer, SIGNAL(timeout()),this, SLOT(raiseWidgetss()));
-    raiseTimer->start(5);
-
-    autoViewMaxStep = 0;
-    autoViewCurrentStep = 0;
-    autoViewInterval = 20;//msec per Operation
-    focusTime = 300;//msec
-    autoViewTimer = new QTimer(this);
-    connect(autoViewTimer, SIGNAL(timeout()), this, SLOT(autoViewAdjust()));
-
-    qDebug()<<"Loaded timers.";
+        //qDebug()<<"Loaded timers.";
+    }
 
     statusWindow->show();
+    playState = PlayState::NOTSTART;//qDebug()<<"In PlayScene(), set playState = NOTSTART";
 }
-void PlayScene::init()
+void PlayScene::gameInit()
 {
     this->clearSoldiers();
     this->clearTowers();
     this->originPoint = QPoint(0,0);
     this->pixelSize = defaultPixelSize;
-    thread_pause = false;
+    playState = PlayState::NOTSTART;//qDebug()<<"In gameInit(), set playState = NOTSTART";
     singleMode = true;
-    singleContinousButton->setText("Continous");
+    singleContinuousButton->setText("Continuous");
     autoView = true;
     autoViewButton->setText("Manual");
     roundInfo->setText("GAME NOT START");
@@ -286,70 +352,93 @@ PlayScene::~PlayScene()
 
 void PlayScene::startGameButtonClicked()
 {
-    if(startGameButton->text()=="START")
+
+    if(playState == NOTSTART || playState == GAMESTOP)
     {
-        UI::MainLogic::GetInstance()->GameStart();
-        init();
-        exit_thread_flag = false;
-        emit runThreadStart();
+        mainLogic->clearData();
+        mainLogic->LoadData();
+        this->showStatusWindow();
+
+        gameInit();
+        playState = PlayState::NOPAUSERUNNING;//qDebug()<<"In startGameButtonClicked(), set playState = NOPAUSERUNNING";
+
         startGameButton->setText("STOP");
         resumeGameButton->setText("PAUSE");
-        resumeGameButton->setVisible(true);
 
         roundComboBox->clear();
-        for(auto item: UI::MainLogic::GetInstance()->fileTemp.keys())
+        for(auto item: mainLogic->fileTemp.keys())
         {
             roundComboBox->addItem(QString::number(item));
         }
+        roundComboBox->addItem("End");
+        roundComboBox->setCurrentIndex(0);
 
-        //viewPlayerBox->setCurrentIndex(0);
+        viewPlayerBox->setCurrentIndex(0);
     }
-    else if(startGameButton->text()=="STOP")
+    else if(playState == GAMEPAUSE || playState == NOPAUSERUNNING || playState == THREADPAUSE)
     {
-        UI::MainLogic::GetInstance()->GameOver();
-        exit_thread_flag = true;
+        playState = PlayState::GAMESTOP;//qDebug()<<"In startGameButtonClicked(), set playState = GAMESTOP";
+        //Whether to clear the data.
         startGameButton->setText("START");
         resumeGameButton->setText("PAUSE");
-        resumeGameButton->setVisible(false);
+
     }
 }
 
 void PlayScene::resumeGameButtonClicked()
 {
-    if(resumeGameButton->text()=="RESUME")
+    //qDebug()<<"REsume game button clicked. playState : "<<playState;
+    switch(playState)
     {
-        thread_pause = false;
-        resumeGameButton->setText("PAUSE");
-    }
-    else if(resumeGameButton->text()=="PAUSE")
+    case NOTSTART:
     {
-        thread_pause = true;
+        //This should be invisiable.
         resumeGameButton->setText("RESUME");
+        break;
+    }
+    case GAMEPAUSE:
+    { //Resume and do next action
+        playState = NOPAUSERUNNING;//qDebug()<<"In resumeGameButtonClicked(), set playState = NOPAUSERUNNING";
+        resumeGameButton->setText("PAUSE");
+
+        break;
+
+    }
+    case GAMESTOP:
+    {
+        resumeGameButton->setText("RESUME");
+        break;
+    }
+    case NOPAUSERUNNING:
+    {
+        playState = GAMEPAUSE;//qDebug()<<"In resumeGameButtonClicked(), set playState = GAMEPAUSE";
+        resumeGameButton->setText("RESUME");
+    }
+    case THREADPAUSE:
+    {
+        break;
+    }
     }
 }
 
 void PlayScene::speedUpButtonClicked()
 {
-    if(UI::MainLogic::GetInstance()->speed>0.033)
-        UI::MainLogic::GetInstance()->speed*= 0.91;
+    if(playSpeed>minimumPlaySpeed)
+        playSpeed*= 0.91;
     else
-        UI::MainLogic::GetInstance()->speed = 0.03;
+        playSpeed = minimumPlaySpeed;
 }
 
 void PlayScene::speedDownButtonClicked()
 {
-    UI::MainLogic::GetInstance()->speed*= 1.1;
+    playSpeed*= 1.1;
 }
 
 void PlayScene::goBackButtonClicked()
 {
-    UI::MainLogic::GetInstance()->startScene->show();
-    //UI::MainLogic::GetInstance()->playScene->hide();
-    qDebug()<<"Back clicked, set exit_thread_flag = true";
-    exit_thread_flag = true;
-    init();
-    startGameButton->setText("START");
-    minimizeStatusWindow();
+    mainLogic->startScene->show();
+    if(playState == GAMEPAUSE || playState == NOPAUSERUNNING || playState == THREADPAUSE)
+        startGameButtonClicked();//To stop game
 }
 
 void PlayScene::autoViewButtonClicked()
@@ -366,73 +455,34 @@ void PlayScene::autoViewButtonClicked()
     }
 }
 
-void PlayScene::singleContinousButtonClicked()
+void PlayScene::singleContinuousButtonClicked()
 {
     if(singleMode == true)
+        // From single step to continuous
     {
         singleMode = false;
-        thread_pause = false;
-        resumeGameButton->setEnabled(false);
-        singleContinousButton->setText("Single");
+        singleContinuousButton->setText("Single");
+        if(playState == GAMEPAUSE)
+        {
+            resumeGameButtonClicked();
+        }
 
     }
+
+    //From continuous to single step
     else
     {
         singleMode = true;
-        resumeGameButton->setEnabled(true);
-        singleContinousButton->setText("Continous");
+
+        singleContinuousButton->setText("Continuous");
+
     }
 }
 
 void PlayScene::changeViewPlayerCallback()
 {
-    return;
-    qDebug()<<"Change View";
-    int newViewID = viewPlayerBox->currentText().toInt();
-    if(newViewID == viewID )
-        return;
-    else
-    {
-        viewID = newViewID;
-        if(newViewID == -1)
-        {
-            for(int i = 0;i<50;i++)
-            {
-                for(int j = 0;j<50;j++)
-                {
-                    blackBlocks[i][j]->hide();
-                }
-            }
-        }
-        else
-        {
-            for(int i = 0;i<50;i++)
-            {
-                for(int j = 0;j<50;j++)
-                {
-                    if(UI::MainLogic::GetInstance()->players[viewID]->m_VVView[i][j] == 1)
-                        blackBlocks[i][j]->show();
-                    else
-                        blackBlocks[i][j]->hide();
-                }
-            }
-        }
-
-    }
-}
-
-void PlayScene::minimizeStatusWindow()
-{
-    if(minimizeStatusButton->text()=="Minimize")
-    {
-        statusWindow->setGeometry(QRect(QPoint(1100, 450), QSize(200,200)));
-        minimizeStatusButton->setText("Return");
-    }
-    else
-    {
-        statusWindow->setGeometry(QRect(QPoint(1100, 90), QSize(700,1000)));
-        minimizeStatusButton->setText("Minimize");
-    }
+    //qDebug()<<"Change View";
+    viewID = viewPlayerBox->currentText().toInt();
 }
 
 void PlayScene::showStatusWindow()
@@ -443,23 +493,56 @@ void PlayScene::showStatusWindow()
 
 void PlayScene::myUpdateGeometry()
 {
+    switch(playState)
+    {
+    case NOTSTART:
+    {
+        playStateLabel->setText("NOT START");
+        break;
+    }
+    case GAMEPAUSE:
+    {
+        playStateLabel->setText("GAME PAUSE");
+        break;
+    }
+    case GAMESTOP:
+    {
+        playStateLabel->setText("GAME STOP");
+        break;
+    }
+    case NOPAUSERUNNING:
+    {
+        playStateLabel->setText("RUNNING");
+        break;
+    }
+    case THREADPAUSE:
+    {
+        playStateLabel->setText("THREAD PAUSE");
+        break;
+    }
+    }
+
+    if(playState == NOTSTART || playState == NOPAUSERUNNING)
+        return;
+
     mapBackGround->setGeometry(QRectF(originPoint,QSizeF(mapSize.width()*pixelSize.width(), mapSize.height()*pixelSize.height())).toRect());
     //const_cast<QRect&>(mapBackGround->geometry()).setRight(std::max(mapBackGround->geometry().right(), 1000));
     UI::TTower*ttower;
     for(auto it = towers.begin(); it!=towers.end();it++)
     {
-        ttower = UI::MainLogic::GetInstance()->towers[it.key()];
+        ttower = mainLogic->towers[it.key()];
         try
         {
             it.value()->setGeometry(QRect(mapToGeo(ttower->m_Position+QPoint(-1,1)),(pixelSize*3).toSize()));
+            it.value()->show();
         }
         catch(const std::exception&){}
     }
     UI::TSoldier*tsoldier;
     for(auto it = soldiers.begin(); it!=soldiers.end();it++)
     {
-        if(UI::MainLogic::GetInstance()->soldiers.find(it.key())!=UI::MainLogic::GetInstance()->soldiers.end())
-            tsoldier = UI::MainLogic::GetInstance()->soldiers[it.key()];
+        if(mainLogic->soldiers.find(it.key())!=mainLogic->soldiers.end())
+            tsoldier = mainLogic->soldiers[it.key()];
         else
             tsoldier =nullptr;
         if(tsoldier!=nullptr)
@@ -474,7 +557,7 @@ void PlayScene::myUpdateGeometry()
         }
         else
         {
-            qDebug()<<"Fail to update soldier geometry in update geometry";
+            //qDebug()<<"Fail to update soldier geometry in update geometry";
 
         }
     }
@@ -483,15 +566,13 @@ void PlayScene::myUpdateGeometry()
     {    delete move;
     }
     MoveSoldier::moveToDelete.clear();
-    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
-        thread_pause = true;
 
     for(auto it = towers.begin();it!=towers.end();it++)
     {
         int id = it.key();
         if(towerBars.keys().contains(id))
         {
-            towerBars[id]->setGeometry(QRect(it.value()->geometry().topLeft(), QSize(pixelSize.width()*3*UI::MainLogic::GetInstance()->towers[id]->m_nBlood/300.0, pixelSize.height())));
+            towerBars[id]->setGeometry(QRect(it.value()->geometry().topLeft(), QSize(pixelSize.width()*3*mainLogic->towers[id]->m_nBlood/300.0, pixelSize.height())));
             towerBars[id]->raise();
             towerBars[id]->show();
         }
@@ -509,11 +590,11 @@ void PlayScene::myUpdateGeometry()
                 QGraphicsOpacityEffect* effect = new QGraphicsOpacityEffect(this);
                 effect->setOpacity(0.6);
                 towerBars[id]->setGraphicsEffect(effect);
-                qDebug()<<"Load red succeeded";
+                //qDebug()<<"Load red succeeded";
             }
             else
             {
-                qDebug()<<"Load red failed.";
+                //qDebug()<<"Load red failed.";
             }
         }
     }
@@ -525,51 +606,86 @@ void PlayScene::myUpdateGeometry()
             towerBars.remove(it.key());
         }
     }
+
+    mapCenterPoint = QPoint(this->size().width()/2, this->size().height()/2);
+
+    briefInfo->setGeometry(QRect(QPoint(this->size().width()-briefInfo->size().width(), this->size().height()-briefInfo->size().height()), briefInfo->size()));
+
+}
+
+void PlayScene::raiseWidgetss()
+{
+    this->soldierInfo->raise();
+    this->towerInfo->raise();
+
+
+}
+void PlayScene::raiseWidgets2()
+{
+    if(playState == NOPAUSERUNNING || playState == THREADPAUSE || playState == GAMEPAUSE)
+    {
+
+    for(auto item: towers)
+    {
+        item->show();
+       item->raise();
+    }
+    }
+}
+
+void PlayScene::viewUpdate()
+{
     if(useView)
     {
         for(int i = 0;i<50;i++)
         {
             for(int j = 0;j<50;j++)
             {
-                blackBlocks[i][j]->setGeometry(QRect(mapToGeo(QPoint(i,j)),pixelSize.toSize()));
+
             }
         }
     }
 }
 
-void PlayScene::raiseWidgetss()
+void PlayScene::paintEvent(QPaintEvent *event)
 {
-    /*
-    this->startGameButton->raise();
-    this->resumeGameButton->raise();
-    this->goBackButton->raise();
-    this->speedDownButton->raise();
-    this->speedUpButton->raise();
-    this->singleContinousButton->raise();
-    this->roundInfo->raise();
-    this->commandInfoList->raise();
-    this->playerInfoTable->raise();
-    */
-    if(useView)
-    {
+    if(playState == NOTSTART || playState == GAMESTOP)
+        return;
+
+    QPainter painter1(this);
+    painter1.setRenderHint(QPainter::Antialiasing, true);
+    painter1.setPen(QPen(Qt::black, 3,Qt::SolidLine, Qt::RoundCap));
+    painter1.setBrush(QBrush(Qt::black, Qt::SolidPattern));
+    QPolygon polygon;
+    if(useView && viewID!=-1)
         for(int i = 0;i<50;i++)
         {
             for(int j = 0;j<50;j++)
             {
-                if(dynamic_cast<QGraphicsOpacityEffect*>(blackBlocks[i][j]->graphicsEffect())->opacity() >0.2)
+                if(mainLogic->players[viewID]->m_VVView[i][j]==0)
                 {
-                    blackBlocks[i][j]->show();
-                    blackBlocks[i][j]->raise();
+                    polygon.clear();
+
+                    QPoint leftTop = mapToGeo(QPoint(i,j));
+                    polygon.push_back(leftTop);
+                    polygon.push_back(leftTop+QPoint(0, pixelSize.height()));
+                    polygon.push_back(leftTop+QPoint(pixelSize.width(),pixelSize.height()));
+                    polygon.push_back(leftTop+QPoint(pixelSize.width(),0));
+                    polygon.push_back(leftTop);
+
+                    painter1.drawPolygon(polygon);
                 }
-                else
-                    blackBlocks[i][j]->hide();
             }
         }
+
+    if(haveFrame == 1)
+    {
+        for(int i = 1;i<5;i++)
+        {
+            painter1.drawLine(mapToGeo(QPointF(i*10.0, -1)), mapToGeo(QPointF(i*10.0,49.0)));
+            painter1.drawLine(mapToGeo(QPointF(0.0, i*10.0 - 1)), mapToGeo(QPointF(50.0,i*10.0 - 1)));
+        }
     }
-    this->soldierInfo->raise();
-    this->towerInfo->raise();
-
-
 }
 
 void PlayScene::focusOn(const QPointF &point)
@@ -579,47 +695,57 @@ void PlayScene::focusOn(const QPointF &point)
         pixelSizeDiff = autoViewPixelSize-pixelSize;
         targetFocusPoint = point;
         autoViewInterval = 20;
-        autoViewMaxStep = std::max(1.0f, UI::MainLogic::GetInstance()->speed*focusTime/autoViewInterval);
+        autoViewMaxStep = std::max(0.0f, playSpeed*focusTime/autoViewInterval);
         autoViewCurrentStep = 0;
-        thread_pause = true;
-        qDebug()<<"In focus on, set thread_pause = true";
         autoViewTimer->start(autoViewInterval);
-
+        //qDebug()<<"Focus on begin";
+    }
+    else
+    {
+        playState = NOPAUSERUNNING;//qDebug()<<"In focus on, too near, set playState = NOPAUSERUNNING";
     }
 }
 void PlayScene::focusOn(const QPoint &point)
 {
-    if(autoView && (mapToGeo(point)-QPoint(450,450)).manhattanLength()>200)
+    if(autoView && (mapToGeo(point)-mapCenterPoint).manhattanLength()>200)
     {
         pixelSizeDiff = autoViewPixelSize-pixelSize;
         targetFocusPoint = point;
         autoViewInterval = 20;
-        autoViewMaxStep = focusTime/autoViewInterval;
+        autoViewMaxStep = std::min(0.0f, playSpeed*focusTime/autoViewInterval);
         autoViewCurrentStep = 0;
-        thread_pause = true;
-        qDebug()<<"In focus on, set thread_pause = true";
         autoViewTimer->start(autoViewInterval);
-
+        //qDebug()<<"focus on begin";
+    }
+    else
+    {
+        playState = NOPAUSERUNNING;//qDebug()<<"In focus on, too near, set playState = NOPAUSERUNNING";
     }
 }
 
 void PlayScene::autoViewAdjust()
 {
+    if(playState == NOTSTART || playState == GAMESTOP)
+        return;
     if(!autoView || autoViewCurrentStep>=autoViewMaxStep || autoViewMaxStep<=0)
     {
         autoViewTimer->stop();
+        originPoint += (mapCenterPoint - mapToGeo(targetFocusPoint));
+        if(playState == THREADPAUSE)
+        {
+
+            playState = NOPAUSERUNNING;//qDebug()<<"In auto view adjust finished, set playState = NOPAUSERUNNING";
+        }
         return;
     }
     else
     {
-        qDebug()<<"In autoViewAdjust: set thread_pause = true";thread_pause = true;
         pixelSize+= pixelSizeDiff/autoViewMaxStep;
-        originPoint += (QPoint(450,450) - mapToGeo(targetFocusPoint))/(autoViewMaxStep-autoViewCurrentStep);
+        originPoint += (mapCenterPoint - mapToGeo(targetFocusPoint))/(autoViewMaxStep-autoViewCurrentStep);
         autoViewCurrentStep++;
-        qDebug()<<"Auto view current Step is:"<<autoViewCurrentStep<<" -- maxStep is: "<<autoViewMaxStep;
+        //qDebug()<<"Auto view current Step is:"<<autoViewCurrentStep<<" -- maxStep is: "<<autoViewMaxStep;
         if(autoViewCurrentStep >= autoViewMaxStep && autoViewMaxStep>0)
         {
-            qDebug()<<"autoViewAdjust Finished, set thread_pause = false";thread_pause = false;
             autoViewCurrentStep = autoViewMaxStep = 0;
         }
     }
@@ -627,10 +753,10 @@ void PlayScene::autoViewAdjust()
 
 void PlayScene::playerUpdate(UI::TPlayer*player)
 {
-    qDebug()<<"In player Update";
+    //qDebug()<<"In player Update";
     if(player==nullptr)
     {
-        qDebug()<<"player == nullptr, cannot update";
+        //qDebug()<<"player == nullptr, cannot update";
         return;
     }
     int col = player->m_nID;
@@ -712,20 +838,23 @@ void PlayScene::playerUpdate(UI::TPlayer*player)
     }
     playerInfoTable->setItem(UI::TPlayer::properties.size(),col,
                              new QTableWidgetItem(QIcon(":/FC16UIResource/tileset/towers/tower"+QString::number(player->m_nID)+".png"),""));
+    playState = NOPAUSERUNNING;//qDebug()<<"playerupdate finished, set playState = nopauserunning";
+    //qDebug()<<"player id is "<<player->m_nID;
 }
 
 void PlayScene::towerUpdate(UI::TTower*tower)
 {
 
     QImage img;
-    QString fileName = ":/FC16UIResource/tileset/towers/tower"+QString::number(tower->getOwnerID())+".png";
+    QString fileName = ":/FC16UIResource/newRes/towers/tower"+QString::number(tower->m_nLevel)+QString::number(tower->getOwnerID())+".png";
+    //qDebug()<<"Tower filename: "<<fileName;
     if(img.load(fileName))
     {
         QLabel* towerLabel = nullptr;
         if(towers.find(tower->m_nID)==towers.end())
         {
             towerLabel =new QLabel(this);
-            towerLabel->setGeometry(QRectF(originPoint+QPointF((tower->m_Position.x()-1)*pixelSize.width(), (tower->m_Position.y()-1)*pixelSize.height()),
+            towerLabel->setGeometry(QRectF(mapToGeo(QPointF(tower->m_Position.x()-1,tower->m_Position.y()-1)),
                                            pixelSize*3).toRect());
             towerLabel->setScaledContents(true);
             towerLabel->raise();
@@ -742,53 +871,57 @@ void PlayScene::towerUpdate(UI::TTower*tower)
     }
     else
     {
-        UI::MainLogic::GetInstance()->WriteLog("Fail to load the image of soldier");
+        mainLogic->WriteLog("Fail to load the image of soldier");
     }
-
+    playState = NOPAUSERUNNING;//qDebug()<<"towerupdate finished, set playState = nopauserunning";
+    //qDebug()<<"tower id is "<<tower->m_nID;
 }
 
 void PlayScene::soldierUpdate(UI::TSoldier*soldier)
 {
+    //qDebug()<<"In soldier update";
     if(soldier == nullptr)
     {
-        return;
-    }
-
-    QImage img;
-    QString fileName = ":/FC16UIResource/tileset/workspace/"+soldier->getImageName();
-    if(img.load(fileName))
-    {
-        QLabel* soldierLabel =nullptr;
-        if(soldiers.find(soldier->m_nID) == soldiers.end())
-        {
-            soldierLabel = new QLabel(this);
-            soldiers[soldier->m_nID] = soldierLabel;
-            qDebug()<<"A new SOldierLabel created, id:"<<soldier->m_nID;
-
-        }
-        else
-            soldierLabel = soldiers[soldier->m_nID];
-        soldierLabel->setGeometry(QRectF(originPoint+QPointF(soldier->m_Position.x()*pixelSize.width(), soldier->m_Position.y()*pixelSize.height()),
-                                         pixelSize).toRect());
-        soldierLabel->setScaledContents(true);
-        soldierLabel->setPixmap(QPixmap::fromImage(img));
-        soldierLabel->raise();
-        soldierLabel->show();
-        UI::MainLogic::GetInstance()->WriteLog("Successfully loaded the image of soldier");
-
     }
     else
     {
-        UI::MainLogic::GetInstance()->WriteLog("Fail to load the image of soldier");
+        QImage img;
+        QString fileName = ":/FC16UIResource/tileset/workspace/"+soldier->getImageName();
+        if(img.load(fileName))
+        {
+            QLabel* soldierLabel =nullptr;
+            if(soldiers.find(soldier->m_nID) == soldiers.end())
+            {
+                soldierLabel = new QLabel(this);
+                soldiers[soldier->m_nID] = soldierLabel;
+                //qDebug()<<"A new SOldierLabel created, id:"<<soldier->m_nID;
+
+            }
+            else
+                soldierLabel = soldiers[soldier->m_nID];
+            soldierLabel->setGeometry(QRectF(mapToGeo(soldier->m_Position),
+                                             pixelSize).toRect());
+            soldierLabel->setScaledContents(true);
+            soldierLabel->setPixmap(QPixmap::fromImage(img));
+            soldierLabel->raise();
+            soldierLabel->show();
+            mainLogic->WriteLog("Successfully loaded the image of soldier");
+
+        }
+        else
+        {
+            mainLogic->WriteLog("Fail to load the image of soldier");
+        }
+        mainLogic->WriteLog("SoldierFilename is "+fileName.toStdString());
+
+        //qDebug()<<"Soldier id = "<<soldier->m_nID;
     }
-    UI::MainLogic::GetInstance()->WriteLog("SoldierFilename is "+fileName.toStdString());
-
-
+    playState = NOPAUSERUNNING;//qDebug()<<"soldierupdate finished, set playState = nopauserunning";
+    //qDebug()<<"Return from soldierUpdate()";
 }
 
 void PlayScene::commandUpdate(UI::Command*command)
 {
-    qDebug()<<"In command update, set thread_pause = true";thread_pause = true;
     opacityLabels.clear();
 
     //CommandList
@@ -796,7 +929,7 @@ void PlayScene::commandUpdate(UI::Command*command)
     try
     {
         QListWidgetItem* item = new QListWidgetItem(
-                    "Round "+ QString::number(UI::MainLogic::GetInstance()->gameRound)+
+                    "Round "+ QString::number(mainLogic->gameRound)+
                     ": Player-"+QString::number(command->m_pOwner->m_nID)+":"+
                     command->m_pOwner->m_strVecCommands[command]);
         commandInfoList->addItem(item);
@@ -805,7 +938,7 @@ void PlayScene::commandUpdate(UI::Command*command)
     catch(const std::exception&)
     {}
 
-    float speed = UI::MainLogic::GetInstance()->speed;
+    float speed = playSpeed;
     switch (command->m_nCommandType) {
     case UI::CommandType::Move:
     {
@@ -815,19 +948,19 @@ void PlayScene::commandUpdate(UI::Command*command)
         {
         case UI::UP:
             translateVec = QPointF(0,1)*command->m_nMoveDistance;
-            qDebug()<<"MoveMove UP:";
+            //qDebug()<<"MoveMove UP:";
             break;
         case UI::DOWN:
             translateVec = QPointF(0,-1)*command->m_nMoveDistance;
-            qDebug()<<"MoveMove DOWN";
+            //qDebug()<<"MoveMove DOWN";
             break;
         case UI::RIGHT:
             translateVec = QPointF(1,0)*command->m_nMoveDistance;
-            qDebug()<<"MoveMove RIGHT";
+            //qDebug()<<"MoveMove RIGHT";
             break;
         case UI::LEFT:
             translateVec = QPointF(-1,0)*command->m_nMoveDistance;
-            qDebug()<<"MoveMove LEFT";
+            //qDebug()<<"MoveMove LEFT";
             break;
         default:
             break;
@@ -837,8 +970,8 @@ void PlayScene::commandUpdate(UI::Command*command)
         moveAction->setValue(1, command->m_pMoveSoldier->m_Position+translateVec);
         if(true)//command->m_nMoveDirection == UI::LEFT)
         {
-            qDebug()<<"m_pMovePosition:"<<command->m_pMoveSoldier->m_Position;
-            qDebug()<<"Dest:"<<command->m_pMoveSoldier->m_Position+translateVec;
+            //qDebug()<<"m_pMovePosition:"<<command->m_pMoveSoldier->m_Position;
+            //qDebug()<<"Dest:"<<command->m_pMoveSoldier->m_Position+translateVec;
         }
         moveAction->startMove();
 
@@ -879,7 +1012,7 @@ void PlayScene::commandUpdate(UI::Command*command)
         }
         else
         {
-            qDebug()<<"Fail to load upgrade.png ";thread_pause = false;
+            //qDebug()<<"Fail to load upgrade.png ";thread_pause = false;
         }
     }
         break;
@@ -923,7 +1056,7 @@ void PlayScene::commandUpdate(UI::Command*command)
         }
         else
         {
-            qDebug()<<"load produce FAIL";thread_pause = false;
+            //qDebug()<<"load produce FAIL";thread_pause = false;
         }
     }
         break;
@@ -966,7 +1099,7 @@ void PlayScene::commandUpdate(UI::Command*command)
         }
         else
         {
-            qDebug()<<"load attack FAIL";thread_pause = false;
+            //qDebug()<<"load attack FAIL";thread_pause = false;
         }
         if(imgVictim.load(":/FC16UIResource/victim.jpg"))
         {
@@ -1012,83 +1145,33 @@ void PlayScene::commandUpdate(UI::Command*command)
         }
         else
         {
-            qDebug()<<"load victim FAIL";thread_pause = false;
+            //qDebug()<<"load victim FAIL";thread_pause = false;
         }
     }
         break;
-        /*case 520://UI::CommandType::Attack:
-    {
-        UI::TSoldier* attacker = command->m_pAttackObject;
 
-        UI::TSoldier* victim_s = dynamic_cast<UI::TSoldier*>(command->m_pVictimObject);
-        UI::TTower* victim_t = dynamic_cast<UI::TTower*>(command->m_pVictimObject);
-        if(attacker==nullptr)
-        { qDebug()<<"attacker== nullptr";thread_pause = false;return;}
-        QLabel* victimLabel = nullptr;
-        QPointF vicPos;
-
-        if(victim_s!=nullptr)
-        {
-            victimLabel = soldiers[victim_s->m_nID];
-            vicPos = victim_s->m_Position;
-        }
-        else if(victim_t !=nullptr)
-        {
-            victimLabel = towers[victim_t->m_nID];
-            vicPos = victim_t->m_Position;
-        }
-        else
-        {
-            return;
-        }
-        MoveSoldier* moveAction = new MoveSoldier(&command->m_pAttackObject->m_Position, speed*1000);
-        moveAction->setValue(0, command->m_pAttackObject->m_Position);
-        moveAction->setValue(0.5, vicPos);
-        moveAction->setValue(1, command->m_pAttackObject->m_Position);
-        moveAction->startMove();
-
-        if(victimLabel!=nullptr)
-        {
-            QGraphicsOpacityEffect* effect = dynamic_cast<QGraphicsOpacityEffect*>(victimLabel->graphicsEffect());
-            if(effect == nullptr)
-                effect = new QGraphicsOpacityEffect();
-            effect->setOpacity(0);
-            victimLabel->setGraphicsEffect(effect);
-            QPropertyAnimation*animation = new QPropertyAnimation(effect, "opacity");
-            animation->setDuration(moveAction->duration);
-            animation->setStartValue(1);
-            int maxNum = 1000;
-            int i;
-            for(i = 0.5*maxNum;i<=0.8*maxNum;i++)
-            {
-                if(i%2==0)
-                    animation->setKeyValueAt(float(i)/maxNum,0);
-                else
-                    animation->setKeyValueAt(float(i)/maxNum,1);
-            }
-            animation->setKeyValueAt(float(i)/maxNum,1);
-            animation->setEndValue(1);
-            opacityLabels.push_back(victimLabel);
-            animation->start(QAbstractAnimation::DeleteWhenStopped);
-            opacityTimer->start(20);
-        }
-
-        QTimer::singleShot(moveAction->duration, this, SLOT(resumeThread()));
-
-
-        break;
-    }
-    */
     default:
-        qDebug()<<"Incorrect command type, thread_pause = false";thread_pause = false;
+        //qDebug()<<"Incorrect command type, thread_pause = false";thread_pause = false;
         break;
     }
 }
 
 void PlayScene::roundUpdate()
 {
-    roundInfo->setText("Round "+QString::number(UI::MainLogic::GetInstance()->gameRound));
+    roundInfo->setText("Round "+QString::number(mainLogic->gameRound));
+    if(playState == THREADPAUSE)
+    {
+        playState = NOPAUSERUNNING;//qDebug()<<"ROUNDupdate finished, set playState = nopauserunning";
+    }
 
+    QString info;
+    info = "Round: "+QString::number(mainLogic->gameRound);
+    for(UI::TPlayer* player:mainLogic->players)
+    {
+        info= info+"\n"+"Player"+QString::number(player->m_nID)+": "+QString::number(player->m_nScore);
+    }
+    briefInfo->setText(info);
+    //qDebug()<<"roundUpdate() finished";
 }
 
 void PlayScene::clearTowers()
@@ -1097,8 +1180,7 @@ void PlayScene::clearTowers()
     {    try
         {
             tower->hide();
-
-            UI::MainLogic::GetInstance()->WriteLog("clear a tower");
+            mainLogic->WriteLog("clear a tower");
         }
         catch(const std::exception&)
         {
@@ -1110,56 +1192,77 @@ void PlayScene::clearTowers()
 
 void PlayScene::clearSoldiers()
 {
-    thread_pause = true;
+    if(playState != THREADPAUSE)
+        return;
     for(auto id: soldiers.keys())
     {    try
         {
-            if(!UI::MainLogic::GetInstance()->soldiers.keys().contains(id))
+            if(!mainLogic->soldiers.keys().contains(id))
             {
-                qDebug()<<"hide a soldier, id: "<<id;
+                //qDebug()<<"hide a soldier, id: "<<id;
                 soldiers[id]->hide();
                 delete soldiers[id];
 
                 soldiers.remove(id);
-                UI::MainLogic::GetInstance()->WriteLog("clear a soldier");
+                mainLogic->WriteLog("clear a soldier");
             }
         }
         catch(const std::exception&)
         {
-            qDebug()<<"Clear soldier raise error";
+            //qDebug()<<"Clear soldier raise error";
 
         }
     }
-    thread_pause = false;
-    //soldiers.clear();
+
+    if(playState == THREADPAUSE)
+    {
+
+        playState = NOPAUSERUNNING;//qDebug()<<"clear soldiers finished, set playState = nopauserunning";
+    }
+    //qDebug()<<"Return from clearSoldiers()";
 }
 
 void PlayScene::resumeThread()
 {
-    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
-        return;
-    qDebug()<<"ResumeThread: set thread_pause = false";thread_pause = false;
-    opacityLabels.clear();
-    opacityTimer->stop();
+    //qDebug()<<"Call resumeThread()";
+    if(playState == THREADPAUSE)
+    {
+        playState = NOPAUSERUNNING;//qDebug()<<"Resume thread called, set playState = nopauserunning";
+        opacityLabels.clear();
+        opacityTimer->stop();
+    }
+    //qDebug()<<"Return from resumeThread()";
 }
-
 void PlayScene::resumeThreadAutoView()
 {
-    if(singleMode && resumeGameButton->text()=="RESUME")//state is Pause
-        return;
-    qDebug()<<"ResumeThreadAutoView: set thread_pause = false";thread_pause = false;
-    opacityLabels.clear();
-    opacityTimer->stop();
-
+    //qDebug()<<"Call resumeThreadAutoView()";
+    resumeThread();
+    //qDebug()<<"Return from resumeThreadAutoView";
 }
 
 void PlayScene::goToLoopBeginCallback()
 {
+    //qDebug()<<"Call goToLoopBeginCallback()";
     goToLoopBegin_flag = true;
+    //qDebug()<<"Return from goToLoopBeginCallback()";
+}
+
+void PlayScene::changeFontSizeCallback()
+{
+    //qDebug()<<"Call changeFontSizeCallback()";
+    int fontSize = fontSizeBox->currentText().toInt();
+    //qDebug()<<"FontSize = "<<fontSize;
+    QFont fontA("Microsoft YaHei", fontSize, 50, false);
+    mainLogic->app->setFont(fontA);
+    this->setFont(fontA);
+    statusWindow->setFont(fontA);
+    mainLogic->startScene->setFont(fontA);
+    //qDebug()<<"Return from changeFontSizeCallback";
 }
 
 void PlayScene::opacityUpdate()
 {
+    //qDebug()<<"Call opacityUpdate()";
     for(QLabel* item: opacityLabels)
     {
         try
@@ -1170,6 +1273,7 @@ void PlayScene::opacityUpdate()
         {}
 
     }
+    //qDebug()<<"Return from opacityUpdate()";
 }
 
 QPoint PlayScene::mapToGeo(const QPoint& pos)
@@ -1187,34 +1291,35 @@ QPoint PlayScene::mapToGeo(const QPointF& pos)
 
 void PlayScene::mousePressEvent(QMouseEvent *)
 {
-    if(exit_thread_flag)
-        return;
+    //qDebug()<<"Call mousePressEvent()";
+    if(playState == NOTSTART || playState == GAMESTOP)
+        ;
     else
     {
         QPoint mousePos = QCursor::pos()-this->geometry().topLeft();
-        qDebug()<<"mousePos: "<<mousePos;
+        //qDebug()<<"mousePos: "<<mousePos;
         soldierInfo->hide();
         towerInfo->hide();
         soldierInfo->clear();
         towerInfo->clear();
-        for(UI::TSoldier*soldier: UI::MainLogic::GetInstance()->soldiers)
+        for(UI::TSoldier*soldier: mainLogic->soldiers)
         {
             try
             {
                 if(soldier == nullptr)
-                    return ;
+                    continue;
                 if(soldiers.keys().contains(soldier->m_nID)
                         &&(soldiers[soldier->m_nID]->geometry().center()-mousePos).manhattanLength()<=(pixelSize.width()+pixelSize.height())*0.25)
                 {
                     updateSoldierInfo(soldier);
                     soldierInfo->setGeometry(QRect(mousePos + QPoint(10,10), soldierInfo->size()));
                     soldierInfo->show();
-                    return;
+                    break;
                 }
             }
             catch(const std::exception&){}
         }
-        for(UI::TTower*tower:UI::MainLogic::GetInstance()->towers)
+        for(UI::TTower*tower:mainLogic->towers)
         {
             try
             {
@@ -1228,33 +1333,52 @@ void PlayScene::mousePressEvent(QMouseEvent *)
             catch(const std::exception&){}
         }
     }
+
+    //qDebug()<<"Return from mousePressEvent()";
 }
 
 void PlayScene::updateSoldierInfo(UI::TSoldier *soldier)
 {
-    QString content = soldierInfo->document()->toPlainText();
-    content += "Soldier ID:"+QString::number(soldier->m_nID)+
-            "; Owner:"+QString::number(soldier->m_pOwner->m_nID)+"; Blood:"+QString::number(soldier->m_nBlood)
-            +"; Exp:" +QString::number(soldier->m_nExp)+"; "+UI::SoldierTypeEnum2Str(soldier->m_nSoldierType)+"\n";
-    soldierInfo->setText(content);
+    //qDebug()<<"Call updateSoldierInfo()";
+    if(playState == NOTSTART || playState == GAMESTOP)
+    {}
+    else
+    {
+        QString content = soldierInfo->document()->toPlainText();
+        content += "Soldier ID:"+QString::number(soldier->m_nID)+
+                "; Owner:"+QString::number(soldier->m_pOwner->m_nID)+"; Blood:"+QString::number(soldier->m_nBlood)
+                +"; Exp:" +QString::number(soldier->m_nExp)+"; "+UI::SoldierTypeEnum2Str(soldier->m_nSoldierType)+"\n";
+        soldierInfo->setText(content);
+    }
+    //qDebug()<<"Return from updateSoldierInfo";
 }
 void PlayScene::updateTowerInfo(UI::TTower *tower)
 {
-    QString content = towerInfo->document()->toPlainText();
-    content+= "Tower ID: "+QString::number(tower->m_nID)+
-            "; Owner:"+QString::number(tower->getOwnerID())+"; Blood:"+QString::number(tower->m_nBlood)
-            +"; Level:"+QString::number(tower->m_nLevel);
-    if(tower->m_bRecruiting)
-        content +="; RecuitingRound:"+QString::number(tower->m_nRecruitingRound)
-                +" "+UI::SoldierTypeEnum2Str(tower->m_nRecruitingType);
-    content+="\n";
-    towerInfo->setText(content);
+    //qDebug()<<"Call updateTowerInfo";
+    if(playState == NOTSTART || playState == GAMESTOP)
+    {}
+    else
+    {
+        QString content = towerInfo->document()->toPlainText();
+        content+= "Tower ID: "+QString::number(tower->m_nID)+
+                "; Owner:"+QString::number(tower->getOwnerID())+"; Blood:"+QString::number(tower->m_nBlood)
+                +"; Level:"+QString::number(tower->m_nLevel);
+        if(tower->m_bRecruiting)
+            content +="; RecuitingRound:"+QString::number(tower->m_nRecruitingRound)
+                    +" "+UI::SoldierTypeEnum2Str(tower->m_nRecruitingType);
+        content+="\n";
+        towerInfo->setText(content);
+    }
+    //qDebug()<<"Return from updateTowerInfo()";
 }
 
 void PlayScene::wheelEvent(QWheelEvent *event)
 {
+    //qDebug()<<"Call wheelEvent()";
+    if(playState == NOTSTART || playState == GAMESTOP)
+    {}
     if(autoView)
-        return;
+    {}
     else if(!autoView)
     {
         if(event->modifiers() == Qt::ControlModifier)
@@ -1273,14 +1397,18 @@ void PlayScene::wheelEvent(QWheelEvent *event)
         }
         myUpdateGeometry();
     }
+    //qDebug()<<"Return from wheelEvent()";
 }
 
 void PlayScene::keyPressEvent(QKeyEvent *event)
 {
+    //qDebug()<<"Call keyPressEvent()";
+    if(playState == NOTSTART || playState == GAMESTOP)
+    {}
     if(!autoView)
     {
         signed short temp =  (signed short)(event->key());
-        qDebug()<<"Temp is: "<<temp;
+        //qDebug()<<"Temp is: "<<temp;
         if( event->key() == Qt::Key_W || event->key() == Qt::Key_Up)
         {
             //Up
@@ -1318,102 +1446,156 @@ void PlayScene::keyPressEvent(QKeyEvent *event)
         }
         catch(const std::exception&){}
     }
+    //qDebug()<<"Return from keyPressEvent()";
 }
 
 void PlayScene::closeEvent(QCloseEvent *event)
 {
+    //qDebug()<<"Call closeEvent()";
     statusWindow->close();
+    QApplication::quit();
+    //qDebug()<<"Return from closeEvent()";
 }
 
 
 void Worker::doWork()
 {
-    PlayScene* playScene = UI::MainLogic::GetInstance()->playScene;
-    qDebug()<<"Do work START +++++++++++++++++++++";
+    //qDebug()<<"Do work START +++++++++++++++++++++";
+    mainLogic = UI::MainLogic::GetInstance();
+    playScene->playState = PlayScene::NOTSTART;//qDebug()<<"In doWork begin, set playState = NOTSTART";
     try
     {
-        while(playScene->exit_thread_flag == false)
+        while(!playScene->exit_thread_flag)
         {
-            qDebug()<<"new Round=====";
-            playScene->goToLoopBegin_flag = false;
-            qDebug()<<"Logic update begin";
-            if(!UI::MainLogic::GetInstance()->LogicUpdate(playScene->roundComboBox->currentText().toInt()))
-            {
-                if(playScene->exit_thread_flag)
-                    break;
-            }
-            qDebug()<<"Round : "<<UI::MainLogic::GetInstance()->playScene->roundComboBox->currentText().toInt();
-            qDebug()<<"Logic Update finished";
-            if(playScene->exit_thread_flag)
-                break;
-            QThread::currentThread()->msleep(30);
-            playScene->goToLoopBegin_flag = false;
-            while(playScene->thread_pause);
-            qDebug()<<"Logic update end";
 
-            qDebug()<<"round update begin";
-            QMetaObject::invokeMethod(playScene, "roundUpdate", Qt::QueuedConnection);
+            playScene->goToLoopBegin_flag = false;
+            //qDebug()<<"playState is "<<playScene->playState;
+            checkState();
+            //qDebug()<<"After check state, goToLoopBegin?"<<playScene->goToLoopBegin_flag;
             if(playScene->exit_thread_flag)
                 break;
             if(playScene->goToLoopBegin_flag)
                 continue;
-            QThread::currentThread()->msleep(30);
-            while(playScene->thread_pause);
-            qDebug()<<"round update end";
 
-            qDebug()<<"players update begin";
-            for(auto player: UI::MainLogic::GetInstance()->players)
+            //qDebug()<<"New Round";
+            //qDebug()<<"Logic update begin";
+            if(playScene->roundComboBox->currentText() == "End")
+            {
+                playScene->playState = PlayScene::GAMESTOP;
+                qDebug()<<"GameStopped";
+                continue;
+            }
+            int round = playScene->roundComboBox->currentText().toInt();
+            //qDebug()<<"round = "<<round;
+            if(!mainLogic->LogicUpdate(round))
+            {
+                checkState();
+                if(playScene->exit_thread_flag)
+                    break;
+                if(playScene->goToLoopBegin_flag)
+                    continue;
+            }
+            //qDebug()<<"Round : "<<playScene->roundComboBox->currentText().toInt();
+            //qDebug()<<"Logic Update finished";
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            //qDebug()<<"Logic update end";
+
+            //qDebug()<<"round update begin";
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, Before call roundUpdate, set playState = TRHEADPAUSE";
+            QMetaObject::invokeMethod(playScene, "roundUpdate", Qt::QueuedConnection);
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            //qDebug()<<"round update end";
+
+            //qDebug()<<"players update begin";
+
+
+            for(auto player: mainLogic->players)
             {
                 try
                 {
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, Before playerUpdate, set playState = TRHEADPAUSE";
                     QMetaObject::invokeMethod(playScene, "playerUpdate",
                                               Qt::QueuedConnection, Q_ARG(UI::TPlayer*, player));
                 }
                 catch(const std::exception&){}
+                checkState();
                 if(playScene->exit_thread_flag)
                     break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                QThread::currentThread()->msleep(30);
-                while(playScene->thread_pause);
             }
-            qDebug()<<"players update end";
+            //qDebug()<<"players update end";
 
 
 
-            qDebug()<<"towers update begin";
-            for(auto tower: UI::MainLogic::GetInstance()->towers)
+            //qDebug()<<"towers update begin";
+            for(auto tower: mainLogic->towers)
             {
                 try{
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, before calling towerUpdate(), set playState = THREADPAUSE";
                     QMetaObject::invokeMethod(playScene,"towerUpdate",
                                               Qt::QueuedConnection,Q_ARG(UI::TTower*, tower));
                 }
                 catch(const std::exception&){}
+                checkState();
                 if(playScene->exit_thread_flag)
                     break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                QThread::currentThread()->msleep(30);
-                while(playScene->thread_pause);
             }
-            qDebug()<<"towers update end";
+            //qDebug()<<"towers update end";
 
-            qDebug()<<"Clear soldiers begin";
-            QMetaObject::invokeMethod(playScene,"clearSoldiers",
-                                      Qt::QueuedConnection);
+
+            //qDebug()<<"Clear soldiers begin";
+            checkState();
             if(playScene->exit_thread_flag)
                 break;
             if(playScene->goToLoopBegin_flag)
                 continue;
-            QThread::currentThread()->msleep(30);
-            while(playScene->thread_pause);
-            qDebug()<<"Clear soldiers end";
+            playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In dowork, before calling clearSoldiers(), set playState = THREADPAUSE";
+            QMetaObject::invokeMethod(playScene,"clearSoldiers",
+                                      Qt::QueuedConnection);
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            //qDebug()<<"Clear soldiers end";
 
-            qDebug()<<"soldiers update begin";
-            for(auto soldier: UI::MainLogic::GetInstance()->soldiers)
+            //qDebug()<<"soldiers update begin";
+            for(auto soldier: mainLogic->soldiers)
             {
                 try
                 {
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork(), before calling soldierUpdate, set playState = THREADPAUSE";
                     QMetaObject::invokeMethod(playScene,"soldierUpdate",
                                               Qt::QueuedConnection, Q_ARG(UI::TSoldier*, soldier));
 
@@ -1421,40 +1603,80 @@ void Worker::doWork()
                 catch(const std::exception&)
                 {
                 }
+                checkState();
                 if(playScene->exit_thread_flag)
                     break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                QThread::currentThread()->msleep(30);
-                while(playScene->thread_pause);
             }
-            qDebug()<<"soldiers update end";
+            //qDebug()<<"soldiers update end";
 
-            qDebug()<<"Have pause?";
-            if(playScene->singleMode&&playScene->resumeGameButton->text()=="PAUSE")
+            //qDebug()<<"Have pause?";
+            if(playScene->singleMode&&playScene->playState == PlayScene::NOPAUSERUNNING)
             {
-                qDebug()<<"Pause begin";
+                //qDebug()<<"Pause begin";
                 try
                 {
-                    QMetaObject::invokeMethod(playScene, "resumeGameButtonClicked",Qt::QueuedConnection);
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+
+                    playScene->playState = PlayScene::GAMEPAUSE;//qDebug()<<"In doWork, single mode&&have pause, so set playState = GAMEPAUSE";
+                    playScene->resumeGameButton->setText("RESUME");
                 }
                 catch(const std::exception&){}
+                checkState();
                 if(playScene->exit_thread_flag)
                     break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                QThread::currentThread()->msleep(30);
-                while(playScene->thread_pause);
-                qDebug()<<"Pause end";
+                //qDebug()<<"Pause end";
             }
             else
             {
-                qDebug()<<"No pause";
+                //qDebug()<<"No pause";
             }
 
-            qDebug()<<"commands update begin";
-            for(UI::Command* command: UI::MainLogic::GetInstance()->commands)
+            //qDebug()<<"update view begin";
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, Before calling updateView(), set playState = THREADPAUSE";
+            //qDebug()<<"Updating view";
+            mainLogic->updateView();
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            int currID = 0;
+            //qDebug()<<"commands update begin";
+            for(UI::Command* command: mainLogic->commands)
             {
+                if(command->m_pOwner->m_nID> currID)
+                {
+                    //qDebug()<<"update view begin";
+                    currID = command->m_pOwner->m_nID;
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, updateViewer()2, set playState = THREADPAUSE";
+                    mainLogic->updateView();
+                    //qDebug()<<"update view 2";
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    //qDebug()<<"Update view end";
+
+                }
                 QPointF focusPos;
                 switch(command->m_nCommandType)
                 {
@@ -1481,77 +1703,146 @@ void Worker::doWork()
                 default:
                     break;
                 }
-                //qDebug()<<"before thread_pause:"<<playScene->thread_pause;
-                QMetaObject::invokeMethod(playScene, "focusOn", Qt::QueuedConnection, Q_ARG(QPointF, focusPos));
-                // qDebug()<<"after thread_pause:"<<playScene->thread_pause;
-                QThread::currentThread()->msleep(50);
-                qDebug()<<"after Sleep: thread_pause:"<<playScene->thread_pause;
-                int i = 0;
+                checkState();
+                if(playScene->exit_thread_flag)
+                    break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                while(playScene->thread_pause)
-                {
-                    qDebug()<<"In while "<<i++<<": thread_pause:"<<playScene->thread_pause;
-                    QThread::currentThread()->msleep(50);
-                }
-                qDebug()<<"A Command update begin";
+                playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, before calling focusOn(), set playState = THREADPAUSE";
+                QMetaObject::invokeMethod(playScene, "focusOn", Qt::QueuedConnection, Q_ARG(QPointF, focusPos));
+                checkState();
+                if(playScene->exit_thread_flag)
+                    break;
+                if(playScene->goToLoopBegin_flag)
+                    continue;
+                //qDebug()<<"A Command update begin";
                 try
                 {
-
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork, before calling commandUpdate(), set playState = THREADPAUSE";
                     QMetaObject::invokeMethod(playScene,"commandUpdate",
                                               Qt::QueuedConnection, Q_ARG(UI::Command*, command));
                 }
                 catch(const std::exception&)
                 {
                 }
+                checkState();
                 if(playScene->exit_thread_flag)
                     break;
                 if(playScene->goToLoopBegin_flag)
                     continue;
-                QThread::currentThread()->msleep(30);
-                while(playScene->thread_pause);
-                qDebug()<<"A command update end";
+                //qDebug()<<"A command update end";
 
-                qDebug()<<"Have pause?";
-                if(playScene->singleMode && playScene->resumeGameButton->text()=="PAUSE")
+                //qDebug()<<"Have pause?";
+                if(playScene->singleMode && playScene->playState == PlayScene::NOPAUSERUNNING)
                 {
-                    qDebug()<<"Pause begin";
-                    QMetaObject::invokeMethod(playScene, "resumeGameButtonClicked",Qt::QueuedConnection);
+                    //qDebug()<<"Pause begin";
+                    checkState();
                     if(playScene->exit_thread_flag)
                         break;
-                    QThread::currentThread()->msleep(30);
-                    while(playScene->thread_pause);
-                    qDebug()<<"Pause end";
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    playScene->playState = PlayScene::GAMEPAUSE;//qDebug()<<"In dowork, singleMode && have pause, set playState = GAMEPAUSE";
+                    playScene->resumeGameButton->setText("RESUME");
+                    checkState();
+                    if(playScene->exit_thread_flag)
+                        break;
+                    if(playScene->goToLoopBegin_flag)
+                        continue;
+                    //qDebug()<<"Pause end";
                 }
                 else
                 {
-                    qDebug()<<"No pause";
+                    //qDebug()<<"No pause";
                 }
 
             }
-            qDebug()<<"Commands update end";
-
-            if(!playScene->singleMode)
-                QThread::currentThread()->msleep(UI::MainLogic::GetInstance()->speed*1000);
+            //qDebug()<<"Commands update end";
+            checkState();
             if(playScene->exit_thread_flag)
                 break;
             if(playScene->goToLoopBegin_flag)
                 continue;
-            playScene->roundComboBox->setCurrentIndex(playScene->roundComboBox->currentIndex()+1);
-            QThread::currentThread()->msleep(30);
-            while(playScene->thread_pause);
+            playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In doWork(), before calling updateView3, set playState = THREADPAUSE";
+            mainLogic->updateView();
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+
+            if(!playScene->singleMode)
+                QThread::currentThread()->msleep(playScene->playSpeed*500);
+            checkState();
+            if(playScene->exit_thread_flag)
+                break;
+            if(playScene->goToLoopBegin_flag)
+                continue;
+            if(playScene->playState == PlayScene::NOPAUSERUNNING)
+            {
+                if(playScene->roundComboBox->count() == playScene->roundComboBox->maxCount())
+                {
+                    if(playScene->playState == PlayScene::NOPAUSERUNNING
+                            || playScene->playState == PlayScene::GAMEPAUSE
+                            ||  playScene->playState == PlayScene::THREADPAUSE)
+                    {
+                        playScene->playState = PlayScene::GAMESTOP;//qDebug()<<"In doWork, GameFinished, set playState = GAMESTOP";
+
+                    }
+                }
+                else
+                {
+                    playScene->roundComboBox->setCurrentIndex(playScene->roundComboBox->currentIndex()+1);
+                }
+            }
+
         }
     }
     catch(const std::exception&){}
-    qDebug()<<"Break from doWork, exit_thread_flag = "<<playScene->exit_thread_flag;
+    //qDebug()<<"Break from doWork, exit_thread_flag = "<<playScene->exit_thread_flag;
 }
 
+//Return false to exit
+void Worker::checkState()
+{
+    //qDebug()<<"in check state. PlayState is "<<playScene->playState;
+    if(playScene->playState == PlayScene::NOTSTART
+            || playScene->playState == PlayScene::GAMESTOP)
+    {
 
+        playScene->goToLoopBegin_flag = true;
+        return;
+    }
+    if(playScene->exit_thread_flag)
+        return;
+    //qDebug()<<"Not return in first check";
+    while(playScene->playState == PlayScene::THREADPAUSE
+          || playScene->playState == PlayScene::GAMEPAUSE)
+    {
+
+        if(playScene->playState == PlayScene::NOTSTART
+                || playScene->playState == PlayScene::GAMESTOP)
+        {
+
+            playScene->goToLoopBegin_flag = true;
+            break;
+        }
+        if(playScene->exit_thread_flag)
+            break;
+    };
+    //qDebug()<<"Return from check state. PlayState is "<<playScene->playState;
+}
 QSet<MoveSoldier*> MoveSoldier::moveToDelete;
 
 
 MoveSoldier::MoveSoldier(QPointF*moveObject, int duration)
 {
+    this->mainLogic = UI::MainLogic::GetInstance();
+    this->playScene = mainLogic->playScene;
     this->moveObject = moveObject;
     this->duration = duration;
     this->interval = 20;//default
@@ -1591,10 +1882,13 @@ void MoveSoldier::setValue(float step, const QPointF &value)
 
 void MoveSoldier::startMove()
 {
-    qDebug()<<"Start moveSoldier: set thread_pause = true";
-    UI::MainLogic::GetInstance()->playScene->thread_pause = true;
+    //qDebug()<<"Call startMove()";
+    if(playScene->playState == PlayScene::NOPAUSERUNNING)
+    {
+        playScene->playState = PlayScene::THREADPAUSE;//qDebug()<<"In startMove, set playState = THREADPAUSE";
+    }
     this->currStep = 0;
-    qDebug()<<"From "<<values[0]<<" to "<<values[values.size()-1];
+    //qDebug()<<"From "<<values[0]<<" to "<<values[values.size()-1];
     moveTimer->start(interval);
 }
 
@@ -1629,11 +1923,15 @@ QPair<MoveSoldier::ValueType, MoveSoldier::ValueType> MoveSoldier::getNeighbor()
 
 void MoveSoldier::updateValue()
 {
-    if(currStep>=maxStep && maxStep > 0)
+    if(currStep>=maxStep )
     {
+        *moveObject = values[values.size()-1].second;
         moveTimer->stop();
         moveToDelete.insert(this);
-        UI::MainLogic::GetInstance()->playScene->thread_pause = false;
+        if(playScene->playState == PlayScene::THREADPAUSE)
+        {
+            playScene->playState = PlayScene::NOPAUSERUNNING;//qDebug()<<"In update value finished, set playState = NOPAUSERUNNING";
+        }
     }
     else if(currStep<maxStep)
     {

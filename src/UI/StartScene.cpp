@@ -2,6 +2,7 @@
 #include "ui_StartScene.h"
 #include <QFileDialog>
 #include "../Logic/MainLogic.h"
+#include "PlayScene.h"
 
 StartScene::StartScene(QWidget *parent) :
     QMainWindow(parent),
@@ -11,9 +12,11 @@ StartScene::StartScene(QWidget *parent) :
     this->setWindowTitle("FC16UI-START");
     this->setGeometry(QRect(QPoint(720, 405), QSize(480, 270)));
     this->setFixedSize(QSize(480, 270));
+    this->setWindowIcon(QIcon(":/FC16UIResource/Logo1.PNG"));
 
     introLabel = new QLabel(this);
-    introLabel->setText("文件路径不要包含中文字符\n文件命名最好按照C语言命名标准");
+    introLabel->setText("文件路径不要包含中文字符\n文件命名最好按照C语言命名标准"
+                        "\n可在settings.txt内设置字体大小");
     introLabel->setGeometry(QRect(QPoint(130, 40),
                                   QSize(240, 50)));
 
@@ -39,6 +42,7 @@ void StartScene::openFileButtonClicked()
     if(fileName.isEmpty())
         return;
     UI::MainLogic::GetInstance()->loadFileName = fileName;
-    UI::MainLogic::GetInstance()->GameStart();
+    UI::MainLogic::GetInstance()->clearData();
+    UI::MainLogic::GetInstance()->LoadData();
 }
 

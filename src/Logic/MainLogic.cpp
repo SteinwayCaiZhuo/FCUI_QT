@@ -5,7 +5,9 @@
 #include <thread>
 #include <chrono>
 #include <QDebug>
-
+#include <iostream>
+#include <fstream>
+#include <string>
 
 
 namespace UI
@@ -16,14 +18,12 @@ MainLogic* MainLogic::m_pInstance = nullptr;
 MainLogic::MainLogic()
 {
 
-    gameState = GameState::GAME_NOT_START;
-    mapFile = "gameMap.png";
-    loadFileName = "result.txt";
+
     logFileStream.open("log.txt", std::ios::out);
     logFileStream << "Starting..\n";
     playerAlive = 4;
-    speed = 1;//Default setting
     gameRound = 0;
+    MapSize = 50;
 
 
     for (int i = 0; i < PLAYER_NUM; i++)
@@ -44,69 +44,7 @@ MainLogic::~MainLogic()
 {
     logFileStream << "MainLogic destruction..\n";
     logFileStream.close();
-    if(startScene!=nullptr)
-        delete startScene;
-    if(playScene != nullptr)
-        delete playScene;
 }
-
-
-
-
-
-void MainLogic::GameStart()
-{
-    //if (gameState != GameState::GAME_NOT_START)
-    //	return;
-    //gameRound = 0;
-    //gameState = GameState::GAME_RUNNING;
-    MainLogic::clearData();
-    LoadData();
-    playScene->showStatusWindow();
-}
-
-void MainLogic::GameLoop()
-{
-
-}
-
-void MainLogic::GameOver()
-{
-    if (gameState == GameState::GAME_NOT_START)
-    {
-        return;
-    }
-
-    else
-    {
-        gameRound = 0;
-        gameState = GameState::GAME_NOT_START;
-        MainLogic::clearData();
-    }
-
-}
-
-void MainLogic::GamePause()
-{
-    if (gameState != GameState::GAME_RUNNING)
-        return;
-    else
-    {
-        gameState = GameState::GAME_PAUSE;
-    }
-}
-
-void MainLogic::GameResume()
-{
-    if (gameState != GameState::GAME_PAUSE)
-        return;
-    else
-    {
-        gameState = GameState::GAME_RUNNING;
-    }
-}
-
-
 
 
 void MainLogic::LoadData()
@@ -119,20 +57,33 @@ void MainLogic::LoadData()
     }
 
     fileTemp.clear();
-    QFile myFile(loadFileName);
-    if (!myFile.open(QIODevice::ReadOnly | QIODevice::Text))
-        qDebug()<<"File open error";
-    QTextStream tempStream(&myFile);
+    std::ifstream fin(loadFileName.toStdString(), std::ios::in);
+    std::string stdTemp;
+    int cnt = 0;
+    QVector<QString>fileVec;
+    while(!fin.eof())
+    {
+       std::getline(fin,stdTemp);
+       cnt++;
+       if(cnt%100==0)
+       {
+           qDebug()<<cnt<<"  "<<QString::fromStdString(stdTemp);
+       }
+       fileVec.push_back(QString::fromStdString(stdTemp));
+    }
+    fin.close();
     QString tempString;
-    QString lineTemp;
+
     int roundTemp = 0;
     bool tempMark=false;
-    while(!myFile.atEnd())
+    for(int i = 0;i<fileVec.size();)
     {
-        lineTemp = tempStream.readLine();
+        QString lineTemp = fileVec[i++];
+        //qDebug()<<lineTemp;
         if(lineTemp == "RoundEnd")
         {
             fileTemp[roundTemp] = tempString;
+            qDebug()<<"RoundTemp: "<<roundTemp;
             tempString.clear();
         }
         else
@@ -152,60 +103,18 @@ void MainLogic::LoadData()
             tempString += lineTemp+"\n";
         }
     }
-    myFile.close();
 
-    if (ifsGameResult.is_open())
-        ifsGameResult.close();
-    ifsGameResult.open(loadFileName.toStdString(), std::ios::in);
-    if (!ifsGameResult.is_open()) return;
-    MainLogic::GetInstance()->WriteLog("Succesfully loaded the file");
-    qDebug()<<"Successfully loaded the file";
-    //ifsGameResult.close();
+
+
     if(playScene==nullptr)
     {
         qDebug()<<"PlayScene is nullptr";
         playScene = new PlayScene();
+        playScene->mainLogic = this;
         qDebug()<<"In MainLogic, playScene is constructed.";
     }
     playScene->show();
     startScene->hide();
-}
-
-bool MainLogic::LogicUpdate()
-{
-
-    std::string strLine;
-    std::string mark_type;
-    int mark_lines;
-    std::stringstream strstrm("test");
-    while (true)
-    {
-        getline(ifsGameResult, strLine);
-
-        //End of game
-        if (strLine.empty())
-            return false;
-
-        MyClear(strstrm);
-        strstrm << strLine;
-        strstrm >> mark_type >> mark_lines;
-        MyClear(strstrm);
-        if (mark_type.empty() || mark_type == "RoundEnd")
-            break;
-        else
-        {
-            try
-            {
-                parseLines(mark_type, mark_lines);
-            }
-            catch (std::exception&)
-            {
-                MainLogic::GetInstance()->WriteLog("Logic Update error!");
-            }
-        }
-
-    }
-    return true;
 }
 
 bool MainLogic::LogicUpdate(const int&round)
@@ -351,7 +260,7 @@ bool MainLogic::LogicUpdate(const int&round)
                                 QList<QString> numberStrs = stringLine2.split(" ");
                                 for(int jj = 0;jj<mapSize;jj++)
                                 {
-                                    players[id]->m_VVView[ii][jj] = numberStrs.at(jj).toInt();
+                                    players[id]->m_VVView[jj][49-ii] = numberStrs.at(jj).toInt();
                                 }
                             }
                             qDebug()<<"Successfully update viewMap for player "<<id;
@@ -369,7 +278,11 @@ bool MainLogic::LogicUpdate(const int&round)
                         id++;
 
 
-                        std::string strLine = stringList[lineCnt++].toStdString();
+                        std::string strLine = stringList[lineCnt].toStdString();
+                        if(QString::fromStdString(strLine).split(" ").size()!=2)
+                            continue;
+                        else
+                            lineCnt++;
                         {
                             std::stringstream strstrm(strLine);
                             strstrm >> mark_player_id >> mark_commands_lines;
@@ -471,217 +384,157 @@ bool MainLogic::LogicUpdate(const int&round)
     }
 }
 
-void MainLogic::parseLines(const std::string&mark_type, const int&mark_lines)
+void MainLogic::updateView()
 {
-    std::string strLine;
-    std::stringstream strstrm("init");
-
-    if (mark_type == "RoundBegin")
-    {
-        if (mark_lines != 1)
-        {
-
-        }
-        getline(ifsGameResult, strLine);
-        MyClear(strstrm);
-        strstrm << strLine;
-        strstrm >> gameRound;
-        MyClear(strstrm);
-        WriteLog("Game round: " + std::to_string(gameRound));
-    }
-    else if (mark_type == "PlayerAlive")
-    {
-        if (mark_lines != 1)
-        {}
-        getline(ifsGameResult, strLine);
-        MyClear(strstrm);
-        strstrm << strLine;
-        strstrm >> playerAlive;
-        MyClear(strstrm);
-
-    }
-    else if (mark_type == "PlayerInfo")
-    {
-        if (players.size() < PLAYER_NUM)
-        {
-            clearData();
-            initData();
-
-        }
-        if (mark_lines > PLAYER_NUM)
-        {}
-
-        std::string temp_str;
-        int id;
-
-        for (int i = 0; i < mark_lines; i++)
-        {
-            getline(ifsGameResult, strLine);
-            MyClear(strstrm);
-            strstrm << strLine;
-            strstrm >> temp_str >> id;
-            MyClear(strstrm);
-            getline(ifsGameResult, strLine);
-
-            players[id]->Generate(strLine);
-            players[id]->m_nID = id;
-
-            //WriteLog("Player " + std::to_string(id));
-            //WriteInfo(players[id]);
-        }
-
-    }
-    else if (mark_type == "TowerInfo")
-    {
-        for (int i = 0; i < mark_lines; i++)
-        {
-            getline(ifsGameResult, strLine);
-            towers[i]->Generate(strLine);
-            towers[i]->SetVec2Position(i);
-            //WriteInfo(towers[i]);
-        }
-    }
-    else if (mark_type == "SoldierInfo")
-    {
-        int maxSoldierID = maxKey(soldiers);
-
-        //Clear old soldiers
-        for (auto item : soldiers)
-        {
-            delete item;
-        }
-        soldiers.clear();
-
-        //Generate new soldiers
-        for (int i = 0; i < mark_lines; i++)
-        {
-            getline(ifsGameResult, strLine);
-            try
+    for(int i = 0;i<4;i++)
+        for(int j = 0 ;j<50;j++)
+            for(int k = 0;k<50;k++)
             {
-                TSoldier* newSoldier = new TSoldier();
-                newSoldier->Generate(strLine);
-                soldiers[newSoldier->m_nID]= newSoldier;
-
-                if (newSoldier->m_nID > maxSoldierID)
-                    newSoldier->m_bFreshman = true;
-                //WriteInfo(newSoldier);
-            }
-            catch (const std::exception&)
-            {
-                MainLogic::GetInstance()->WriteLog("Error generating soldiers");
-            }
-        }
-
-
+                players[i]->m_VVView[j][k] = 0;
     }
-
-    //Generate Command
-    else if (mark_type == "CommandsInfo")
+    for(int id = 0;id<4;id++)
     {
-        std::string mark_type_command, temp_str;
-        int mark_player_id, mark_commands_lines, mark_info_command;
-
-        for (auto item : commands)
-            delete item;
-        commands.clear();
-        UI::Command* newCommand = nullptr;
-        for (int i = 0; i < mark_lines; i++)
+        for(int i = 0;i<towers.size();i++)
         {
-            getline(ifsGameResult, strLine);
-            {
-                std::stringstream strstrm(strLine);
-                strstrm >> mark_player_id >> mark_commands_lines;
-            }
-            for (int j = 0; j < mark_commands_lines; j++)
-            {
-                getline(ifsGameResult, strLine);
-
-                std::stringstream strstrm(strLine);
-                strstrm >> mark_type_command;
-
-                newCommand = new Command();
-
-                try
-                {
-                    newCommand->m_pOwner = players[mark_player_id];
-                    newCommand->m_pOwner->m_strVecCommands[newCommand]=QString::fromStdString(strLine);
-                    if (mark_type_command == "Move")
-                    {
-                        newCommand->m_nCommandType = UI::CommandType::Move;
-
-                        //SoldierID
-                        strstrm >> mark_type_command >> mark_info_command;
-                        newCommand->m_pMoveSoldier = soldiers[mark_info_command];
-                        //Direction
-                        strstrm >> mark_type_command >> temp_str;
-                        newCommand->m_nMoveDirection = moveDirStr2Enum(temp_str);
-                        //Distance
-                        strstrm >> mark_type_command >> mark_info_command;
-                        newCommand->m_nMoveDistance = mark_info_command;
-
-                        newCommand->m_pMoveSoldier->m_strctSoldierMove = UI::SoldierMoveType{ true, newCommand->m_nMoveDirection, newCommand->m_nMoveDistance };
-
-                    }
-                    else if (mark_type_command == "Attack")
-                    {
-                        newCommand->m_nCommandType = UI::CommandType::Attack;
-                        //SoldierID
-                        strstrm >> mark_type_command >> mark_info_command;
-                        newCommand->m_pAttackObject = soldiers[mark_info_command];
-                        //VicType
-                        strstrm >> mark_type_command >> temp_str;
-                        strstrm >> mark_type_command >> mark_info_command;
-                        if (temp_str == "Soldier")
-                            newCommand->m_pVictimObject = soldiers[mark_info_command];
-                        else if (temp_str == "Tower")
-                            newCommand->m_pVictimObject = towers[mark_info_command];
-                        newCommand->m_pAttackObject->m_pVictim = newCommand->m_pVictimObject;
-                    }
-                    else if (mark_type_command == "Upgrade")
-                    {
-                        newCommand->m_nCommandType = UI::CommandType::Upgrade;
-                        strstrm >> temp_str >> mark_info_command;
-                        newCommand->m_pUpgradeTower = towers[mark_info_command];
-
-                    }
-                    else if (mark_type_command == "Produce")
-                    {
-                        newCommand->m_nCommandType = UI::CommandType::Produce;
-
-                        strstrm >> temp_str >> mark_info_command;
-                        newCommand->m_pProduceTower = towers[mark_info_command];
-                        strstrm >> temp_str >> mark_type_command;
-                        newCommand->m_nProduceSoldierType = UI::SoldierTypeStr2Enum(mark_type_command);
-                    }
+            if(true)
+            {//改一下塔的视野公开(已改)
+                int x = towers[i]->m_Position.x();
+                int y = towers[i]->m_Position.y();
+                int level = towers[i]->m_nLevel;
+                if (towers[i]->m_pOwner == nullptr) {
+                    level = 1;
                 }
-
-                catch (const std::exception&)
+                for(int j=x-2-level;j<x+3+level;j++)
                 {
-                    WriteLog("Command read error");
-
-                    delete newCommand;
-                    newCommand = nullptr;
-                }
-                if (newCommand != nullptr)
-                {
-                    MainLogic::GetInstance()->commands.push_back(newCommand);
-                    newCommand->m_pOwner->m_vecCommands.push_back(newCommand);
-
-                    //WriteInfo(newCommand);
+                    for(int k=y-2-level;k<y+3+level;k++)
+                    {
+                        if(j>=0&&j<50&&k>=0&&k<50)
+                        {
+                            players[id]->m_VVView[j][k] = 1;
+                        }
+                    }
                 }
             }
         }
-        MyClear(strstrm);
+        for(auto i: soldiers.keys())
+        {
+            if(soldiers[i] == nullptr)
+                continue;
+            if(soldiers[i]->m_pOwner == players[id]){
+                int x = soldiers[i]->m_Position.x();
+                int y = soldiers[i]->m_Position.y();
+                switch (soldiers[i]->m_nSoldierType)
+                {
+                case LightInfantry:
+                    for(int j=x-3;j<x+4;j++)
+                    {
+                        for(int k=y-3;k<y+4;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case LightArcher:
+                    for(int j=x-3;j<x+4;j++)
+                    {
+                        for(int k=y-3;k<y+4;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case LightKnight:
+                    for(int j=x-5;j<x+6;j++)
+                    {
+                        for(int k=y-5;k<y+6;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case Mangonel:
+                    for(int j=x-2;j<x+3;j++)
+                    {
+                        for(int k=y-2;k<y+3;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case HeavyInfantry:
+                    for(int j=x-3;j<x+4;j++)
+                    {
+                        for(int k=y-3;k<y+4;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case HeavyArcher:
+                    for(int j=x-3;j<x+4;j++)
+                    {
+                        for(int k=y-3;k<y+4;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                case HeavyKnight:
+                    for(int j=x-4;j<x+5;j++)
+                    {
+                        for(int k=y-4;k<y+5;k++)
+                        {
+                            if(j>=0&&j<MapSize&&k>=0&&k<MapSize)
+                            {
+                                players[id]->m_VVView[j][k] = 1;
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
     }
+
+
+   if(playScene->playState == PlayScene::THREADPAUSE)
+   {
+       playScene->playState = PlayScene::NOPAUSERUNNING;
+   }
 }
 
 void MainLogic::clearData()
 {
     WriteLog("ClearData..");
-    //loadFileName = "";
 
-    for (auto item : players)
+
+    for (UI::TPlayer* item : players)
+    {
+        for(int j = 0;j<50;j++)
+            for(int k = 0;k<50;k++)
+                item->m_VVView[j][k] = 1;
         delete item;
+    }
     players.clear();
     for (auto item : towers)
         delete item;
@@ -692,6 +545,8 @@ void MainLogic::clearData()
     for (auto item : commands)
         delete item;
     commands.clear();
+
+    gameRound = 0;
 }
 
 void MainLogic::initData()

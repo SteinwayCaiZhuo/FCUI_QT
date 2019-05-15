@@ -26,14 +26,36 @@ namespace Ui {
 class PlayScene;
 }
 
+
+
 class PlayScene : public QMainWindow
 {
     Q_OBJECT
 
 public:
     explicit PlayScene(QWidget *parent = 0);
-    void init();
+    void gameInit();
     ~PlayScene();
+
+    enum PlayState
+    {
+        NOTSTART,   //the state when playScene is constructed
+                    //click start, then goes to NOPAUSERUNNING,
+        GAMEPAUSE,  //If in single move mode && click pause
+                    //Goes to NOPAUSERUNNING if click resume in single move mode
+                    //      or switch to continuous move mode.
+        GAMESTOP,   //should go to NOTSTART to safely start a new game
+
+        NOPAUSERUNNING, //Running and there is no action.
+                        //Exist for both single and continuous.
+        THREADPAUSE,    //Running and an action is going on.
+
+
+    };
+public:
+    PlayState playState;
+    QLabel* playStateLabel;
+    UI::MainLogic* mainLogic;
 
 //Settings of map
 public:
@@ -57,8 +79,9 @@ private slots:
     void speedDownButtonClicked();
     void goBackButtonClicked();
     void autoViewButtonClicked();
-    void singleContinousButtonClicked();
+    void singleContinuousButtonClicked();
     void changeViewPlayerCallback();
+    void changeFontSizeCallback();
 
 public slots:
     void playerUpdate(UI::TPlayer*player);
@@ -73,13 +96,15 @@ public slots:
     void goToLoopBeginCallback();
     void opacityUpdate();
     void myUpdateGeometry();
+    void viewUpdate();
+    void paintEvent(QPaintEvent*event);
     void focusOn(const QPoint&point);
     void focusOn(const QPointF&point);
     void autoViewAdjust();
     void updateTowerInfo(UI::TTower*);
     void updateSoldierInfo(UI::TSoldier*);
     void raiseWidgetss();
-    void minimizeStatusWindow();
+    void raiseWidgets2();
     virtual void mousePressEvent(QMouseEvent*event);
     virtual void wheelEvent(QWheelEvent *event);
     virtual void keyPressEvent(QKeyEvent*event);
@@ -89,17 +114,17 @@ public slots:
     friend class MoveSoldier;
 private:
     Ui::PlayScene *ui;
-    QMainWindow* statusWindow;
-    QPushButton* minimizeStatusButton;
+    QWidget* statusWindow;
     QPushButton* startGameButton;
     QPushButton* resumeGameButton;
     QPushButton* goBackButton;
     QPushButton* speedUpButton;
     QPushButton* speedDownButton;
     QPushButton* autoViewButton;
-    QPushButton* singleContinousButton;
+    QPushButton* singleContinuousButton;
     QComboBox* roundComboBox;
     QComboBox* viewPlayerBox;
+    QComboBox* fontSizeBox;
 
     QLabel* mapBackGround;
     QLabel* rightBackGround;
@@ -110,15 +135,21 @@ private:
     QTextBrowser* towerInfo;
     QTextBrowser* soldierInfo;
 
+    QTextBrowser* briefInfo;
+
 
     std::atomic<bool>exit_thread_flag;
     std::atomic<bool>thread_pause;
     std::atomic<bool>goToLoopBegin_flag;
 
+    float playSpeed;
+    const float minimumPlaySpeed = 0.002;
     QTimer * opacityTimer;
     QTimer* updateGeometryTimer;
     QTimer* autoViewTimer;
     QTimer* raiseTimer;
+    QTimer* raiseTimer2;
+    QTimer* viewTimer;
     QThread workThread;
 
     QMap<int, QLabel*>soldiers;
@@ -126,7 +157,6 @@ private:
     QMap<int, QLabel*>towerBars;
     bool useView;
     int viewID;
-    QLabel* blackBlocks[50][50];
     QVector<QAbstractAnimation*>animations;
     float wheelScaleRate;
     float translateScaleRate;
@@ -152,7 +182,11 @@ public slots:
 signals:
     void soldierUpdateSignal(UI::TSoldier*soldier);
     void finishedWork();
+public:
+    PlayScene* playScene;
+    UI::MainLogic* mainLogic;
 
+    void checkState();
 };
 
 class MoveSoldier:public QObject
@@ -185,6 +219,8 @@ public:
       static QSet<MoveSoldier*>moveToDelete;
 public:
     int interval;
+    PlayScene* playScene;
+    UI::MainLogic* mainLogic;
 };
 
 
