@@ -4,7 +4,8 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QLabel>
-
+#include <QTextEdit>
+#include <QTextBrowser>
 namespace Ui {
 class StartScene;
 }
@@ -22,7 +23,8 @@ private slots:
 private:
     Ui::StartScene *ui;
     QPushButton* openFileButton;
-    QLabel* introLabel;
+    QTextBrowser* introLabel;
+    QLabel* imgGround;
 };
 
 #endif // STARTSCENE_H

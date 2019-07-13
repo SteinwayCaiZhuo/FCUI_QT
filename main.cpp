@@ -32,9 +32,13 @@ int main(int argc, char *argv[])
     QTextStream filetext(&file);
     QString stylesheet= filetext.readAll();
     a.setStyleSheet(stylesheet);
-    a.setFont(QFont("Microsoft YaHei", 8, 50, false));
+    //a.setFont(QFont("Microsoft YaHei", 8, 50, false));
+    //set font
 
     loadSetting(&a);
+
+
+
 
     UI::MainLogic mainlogic;
     UI::MainLogic::m_pInstance = &mainlogic;

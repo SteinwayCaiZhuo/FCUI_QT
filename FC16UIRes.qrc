@@ -58,5 +58,6 @@
         <file>FC16UIResource/newRes/towers/tower31.png</file>
         <file>FC16UIResource/newRes/towers/tower32.png</file>
         <file>FC16UIResource/newRes/towers/tower33.png</file>
+        <file>FC16UIResource/Logo2.PNG</file>
     </qresource>
 </RCC>

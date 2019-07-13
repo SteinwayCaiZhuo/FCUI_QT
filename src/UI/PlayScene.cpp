@@ -60,7 +60,10 @@ PlayScene::PlayScene(QWidget *parent) :
         statusWindow->setGeometry(QRect(QPoint(1100, 90), QSize(700,1000)));
         statusWindow->setWindowFlags (Qt::WindowMinimizeButtonHint);
         statusWindow->setWindowIcon(QIcon(":/FC16UIResource/Logo1.PNG"));
-
+        //statusWindow->setStyleSheet(QString("background: rgba(0,255,187,50%)"));
+        QPalette pal(statusWindow->palette());
+        pal.setColor(QPalette::Background,QColor(204,204,204));
+        statusWindow->setPalette(pal);
 
 
 
@@ -77,14 +80,15 @@ PlayScene::PlayScene(QWidget *parent) :
             mapBackGround->setGraphicsEffect(effect);
         }
 
-        //qDebug()<<"Loaded backImg";
+        //qDebug()<<"Loaded backImg";            
 
         briefInfo = new QTextBrowser(this);
         QGraphicsOpacityEffect* e_brief = new QGraphicsOpacityEffect(this);
-        e_brief->setOpacity(0.5);
+
         briefInfo->setGraphicsEffect(e_brief);
-        briefInfo->setFixedSize(100,120);
+        briefInfo->setFixedSize(150,150);
         briefInfo->setGeometry(QRect(QPoint(this->size().width()-briefInfo->size().width(),this->size().height()-briefInfo->size().height()), briefInfo->size()));
+        briefInfo->setStyleSheet("color:rgb(0,0,0);background:rgb(255,255,255)");
 
         goBackButton = new QPushButton("BACK", statusWindow);
         goBackButton->setGeometry(QRectF(QPointF(0, 0), QSizeF(80, 30)).toRect());
